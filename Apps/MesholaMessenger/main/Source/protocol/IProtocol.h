@@ -80,6 +80,13 @@ struct ProtocolInfo {
 /**
  * Contact/peer information
  */
+enum class NodeRole : uint8_t {
+    Unknown = 0,
+    Companion = 1,
+    Repeater = 2,
+    Room = 3
+};
+
 struct Contact {
     uint8_t publicKey[PUBLIC_KEY_SIZE];
     char name[MAX_NODE_NAME_LEN];
@@ -89,6 +96,9 @@ struct Contact {
     uint8_t pathLength;         // Hops to reach
     bool hasPath;               // Do we have a route?
     bool isOnline;              // Recently seen?
+    bool isFavorite;            // User pinned
+    bool isDiscovered;          // From adverts (not yet promoted)
+    NodeRole role;              // Companion/Repeater/Room/Unknown
     
     // Optional location (if protocol supports it)
     bool hasLocation;
@@ -236,6 +246,17 @@ public:
      */
     virtual void setLocalIdentity(const uint8_t publicKey[PUBLIC_KEY_SIZE],
                                   const char* name) = 0;
+
+    /**
+     * Mark/unmark a contact as favorite.
+     */
+    virtual bool setContactFavorite(const uint8_t publicKey[PUBLIC_KEY_SIZE],
+                                    bool favorite) = 0;
+
+    /**
+     * Promote a discovered contact to confirmed (clear isDiscovered).
+     */
+    virtual bool promoteContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) = 0;
 
     // ========================================================================
     // Messaging

@@ -96,9 +96,12 @@ MeshCoreProtocol::MeshCoreProtocol()
     Contact broadcast = {};
     strncpy(broadcast.name, "Public Broadcast", sizeof(broadcast.name) - 1);
     broadcast.isOnline = true;
+    broadcast.isDiscovered = true;
+    broadcast.role = NodeRole::Companion;
     broadcast.lastSeen = (uint32_t)time(nullptr);
     broadcast.lastRssi = 0;
     broadcast.pathLength = 1;
+    memset(broadcast.publicKey, 0, sizeof(broadcast.publicKey));
     _contacts.push_back(broadcast);
     
     // Default radio config for MeshCore
@@ -254,20 +257,45 @@ void MeshCoreProtocol::loop() {
         _radio->clearIrqFlags(RADIOLIB_SX126X_IRQ_ALL);
         _radio->startReceive();
 
-        if (state == RADIOLIB_ERR_NONE && _messageCallback) {
-            Message msg = {};
-            if (!parsePacket(rxBuf, packetLen, msg)) {
-                // Fallback: treat as plain text
-                msg.type = MessageType::Direct;
-                msg.isChannel = false;
-                msg.isOutgoing = false;
-                msg.timestamp = (uint32_t)time(nullptr);
-                strncpy(msg.text, reinterpret_cast<const char*>(rxBuf), sizeof(msg.text) - 1);
+        if (state == RADIOLIB_ERR_NONE) {
+            // First try to parse as advert
+            Contact discovered{};
+            if (parseAdvert(rxBuf, packetLen, discovered)) {
+                discovered.rssi = (int16_t)_radio->getRSSI();
+                discovered.lastSnr = (int8_t)_radio->getSNR();
+                discovered.lastSeen = (uint32_t)time(nullptr);
+                discovered.isOnline = true;
+                discovered.isDiscovered = true;
+                // Merge into contacts list
+                bool isNew = true;
+                for (auto& c : _contacts) {
+                    if (memcmp(c.publicKey, discovered.publicKey, PUBLIC_KEY_SIZE) == 0) {
+                        c = discovered;
+                        isNew = false;
+                        break;
+                    }
+                }
+                if (isNew) {
+                    _contacts.push_back(discovered);
+                }
+                if (_contactCallback) {
+                    _contactCallback(discovered, isNew);
+                }
+            } else if (_messageCallback) {
+                Message msg = {};
+                if (!parsePacket(rxBuf, packetLen, msg)) {
+                    // Fallback: treat as plain text
+                    msg.type = MessageType::Direct;
+                    msg.isChannel = false;
+                    msg.isOutgoing = false;
+                    msg.timestamp = (uint32_t)time(nullptr);
+                    strncpy(msg.text, reinterpret_cast<const char*>(rxBuf), sizeof(msg.text) - 1);
+                }
+                msg.rssi = _radio->getRSSI();
+                msg.snr = _radio->getSNR();
+                msg.status = MessageStatus::Received;
+                _messageCallback(msg);
             }
-            msg.rssi = _radio->getRSSI();
-            msg.snr = _radio->getSNR();
-            msg.status = MessageStatus::Received;
-            _messageCallback(msg);
         }
     }
 #endif
@@ -338,9 +366,14 @@ bool MeshCoreProtocol::sendAdvertisement() {
     if (!_radio) {
         return false;
     }
-    const char* payload = "ADV";
+    uint8_t payload[RADIOLIB_SX126X_MAX_PACKET_LENGTH] = {0};
+    size_t payloadLen = 0;
+    uint8_t roleByte = static_cast<uint8_t>(NodeRole::Companion);
+    if (!buildAdvert(roleByte, _selfPublicKey, _selfName[0] ? _selfName : _nodeName, payload, payloadLen)) {
+        return false;
+    }
     _radio->standby();
-    int16_t state = _radio->transmit(reinterpret_cast<const uint8_t*>(payload), strlen(payload));
+    int16_t state = _radio->transmit(payload, payloadLen);
     _radio->startReceive();
     _rxListening = true;
     return state == RADIOLIB_ERR_NONE;
@@ -443,6 +476,28 @@ bool MeshCoreProtocol::findContact(const uint8_t publicKey[PUBLIC_KEY_SIZE], Con
 bool MeshCoreProtocol::addContact(const Contact& contact) {
     _contacts.push_back(contact);
     return true;
+}
+
+bool MeshCoreProtocol::promoteContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) {
+    if (!publicKey) return false;
+    for (auto& c : _contacts) {
+        if (memcmp(c.publicKey, publicKey, PUBLIC_KEY_SIZE) == 0) {
+            c.isDiscovered = false;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MeshCoreProtocol::setContactFavorite(const uint8_t publicKey[PUBLIC_KEY_SIZE], bool favorite) {
+    if (!publicKey) return false;
+    for (auto& c : _contacts) {
+        if (memcmp(c.publicKey, publicKey, PUBLIC_KEY_SIZE) == 0) {
+            c.isFavorite = favorite;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool MeshCoreProtocol::removeContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) {
@@ -602,6 +657,9 @@ bool MeshCoreProtocol::parsePacket(const uint8_t* data,
         return false;
     }
     uint8_t flags = data[3];
+    if (flags & PACKET_FLAG_ADVERT) {
+        return false; // not a message frame
+    }
     bool isChannel = (flags & PACKET_FLAG_CHANNEL) != 0;
 
     memset(&outMsg, 0, sizeof(outMsg));
@@ -622,6 +680,69 @@ bool MeshCoreProtocol::parsePacket(const uint8_t* data,
     strncpy(outMsg.senderName, "Unknown", sizeof(outMsg.senderName) - 1);
     outMsg.status = MessageStatus::Received;
 
+    return true;
+}
+
+bool MeshCoreProtocol::buildAdvert(uint8_t role,
+                     const uint8_t senderKey[PUBLIC_KEY_SIZE],
+                     const char* senderName,
+                     uint8_t* outBuf,
+                     size_t& outLen) const {
+    if (!outBuf) return false;
+    const size_t nameLen = MAX_NODE_NAME_LEN;
+    const size_t totalLen = 4 + 1 + PUBLIC_KEY_SIZE + nameLen; // magic+ver+flags + role + key + name
+    if (totalLen > RADIOLIB_SX126X_MAX_PACKET_LENGTH) {
+        return false;
+    }
+    size_t idx = 0;
+    outBuf[idx++] = PACKET_MAGIC_0;
+    outBuf[idx++] = PACKET_MAGIC_1;
+    outBuf[idx++] = PACKET_VERSION;
+    outBuf[idx++] = PACKET_FLAG_ADVERT;
+    outBuf[idx++] = role;
+    if (senderKey) {
+        memcpy(&outBuf[idx], senderKey, PUBLIC_KEY_SIZE);
+    } else {
+        memset(&outBuf[idx], 0, PUBLIC_KEY_SIZE);
+    }
+    idx += PUBLIC_KEY_SIZE;
+    // fixed-size name field, padded with zeros
+    memset(&outBuf[idx], 0, nameLen);
+    if (senderName) {
+        strncpy(reinterpret_cast<char*>(&outBuf[idx]), senderName, nameLen - 1);
+    }
+    idx += nameLen;
+    outLen = idx;
+    return true;
+}
+
+bool MeshCoreProtocol::parseAdvert(const uint8_t* data,
+                     size_t len,
+                     Contact& outContact) const {
+    const size_t nameLen = MAX_NODE_NAME_LEN;
+    const size_t minLen = 4 + 1 + PUBLIC_KEY_SIZE + nameLen;
+    if (!data || len < minLen) {
+        return false;
+    }
+    if (data[0] != PACKET_MAGIC_0 || data[1] != PACKET_MAGIC_1 || data[2] != PACKET_VERSION) {
+        return false;
+    }
+    uint8_t flags = data[3];
+    if (!(flags & PACKET_FLAG_ADVERT)) {
+        return false;
+    }
+    memset(&outContact, 0, sizeof(outContact));
+    uint8_t role = data[4];
+    switch (role) {
+        case static_cast<uint8_t>(NodeRole::Companion): outContact.role = NodeRole::Companion; break;
+        case static_cast<uint8_t>(NodeRole::Repeater): outContact.role = NodeRole::Repeater; break;
+        case static_cast<uint8_t>(NodeRole::Room): outContact.role = NodeRole::Room; break;
+        default: outContact.role = NodeRole::Unknown; break;
+    }
+    memcpy(outContact.publicKey, &data[5], PUBLIC_KEY_SIZE);
+    size_t nameOffset = 5 + PUBLIC_KEY_SIZE;
+    strncpy(outContact.name, reinterpret_cast<const char*>(&data[nameOffset]), sizeof(outContact.name) - 1);
+    outContact.isDiscovered = true;
     return true;
 }
 

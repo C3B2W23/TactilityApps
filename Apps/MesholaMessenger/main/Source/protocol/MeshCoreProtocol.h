@@ -49,6 +49,8 @@ public:
     bool addContact(const Contact& contact) override;
     bool removeContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) override;
     void resetPath(const uint8_t publicKey[PUBLIC_KEY_SIZE]) override;
+    bool promoteContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) override;
+    bool setContactFavorite(const uint8_t publicKey[PUBLIC_KEY_SIZE], bool favorite) override;
 
     // Channels
     int getChannelCount() const override;
@@ -106,6 +108,7 @@ private:
     static constexpr uint8_t PACKET_MAGIC_1 = 0x4c; // 'L'
     static constexpr uint8_t PACKET_VERSION = 0x01;
     static constexpr uint8_t PACKET_FLAG_CHANNEL = 0x01;
+    static constexpr uint8_t PACKET_FLAG_ADVERT  = 0x02;
 
     bool buildPacket(const char* text,
                      const uint8_t channelId[CHANNEL_ID_SIZE],
@@ -113,9 +116,17 @@ private:
                      bool isChannel,
                      uint8_t* outBuf,
                      size_t& outLen) const;
+    bool buildAdvert(uint8_t role,
+                     const uint8_t senderKey[PUBLIC_KEY_SIZE],
+                     const char* senderName,
+                     uint8_t* outBuf,
+                     size_t& outLen) const;
     bool parsePacket(const uint8_t* data,
                      size_t len,
                      Message& outMsg) const;
+    bool parseAdvert(const uint8_t* data,
+                     size_t len,
+                     Contact& outContact) const;
 
     // Default public channel (MeshCore default)
     Channel _defaultChannel{};

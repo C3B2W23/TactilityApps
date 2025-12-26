@@ -639,6 +639,38 @@ std::vector<Channel> MesholaMsgService::getChannels() const {
     return channels;
 }
 
+bool MesholaMsgService::setContactFavorite(const uint8_t publicKey[PUBLIC_KEY_SIZE], bool favorite) {
+    auto lock = _mutex.asScopedLock();
+    lock.lock();
+    if (!_protocol) {
+        return false;
+    }
+    bool ok = _protocol->setContactFavorite(publicKey, favorite);
+    if (ok) {
+        Contact c{};
+        if (_protocol->findContact(publicKey, c)) {
+            publishContactEvent(c, false);
+        }
+    }
+    return ok;
+}
+
+bool MesholaMsgService::promoteContact(const uint8_t publicKey[PUBLIC_KEY_SIZE]) {
+    auto lock = _mutex.asScopedLock();
+    lock.lock();
+    if (!_protocol) {
+        return false;
+    }
+    bool ok = _protocol->promoteContact(publicKey);
+    if (ok) {
+        Contact c{};
+        if (_protocol->findContact(publicKey, c)) {
+            publishContactEvent(c, false);
+        }
+    }
+    return ok;
+}
+
 // ============================================================================
 // Message History
 // ============================================================================
