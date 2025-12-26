@@ -240,6 +240,14 @@ A channel is a group chat where multiple nodes can participate. Channels have:
 - Channel ID (base64): `izOH6cXN6mrJ5e26oRXNcg==`
 - Use this for quick group testing out of the box.
 
+### Discovered Nodes & Roles
+- When adverts are received, nodes appear in the **Discovered** list with a role:
+  - Companion
+  - Repeater
+  - Room
+- Tap **Add** to promote a discovered node into your contacts.
+- Star a contact to favorite it; favorites are pinned to the top of each role section.
+
 ### Joining a Channel
 
 *(Feature in development)*

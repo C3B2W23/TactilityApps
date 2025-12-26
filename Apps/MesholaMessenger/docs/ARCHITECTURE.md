@@ -184,6 +184,12 @@ struct AppManifest {
 - Channel ID (hex): `8b3387e9c5cdea6ac9e5edbaa115cd72`
 - Channel ID (base64): `izOH6cXN6mrJ5e26oRXNcg==`
 
+**Discovery & Roles (adverts)**
+- Advert frame: magic + version + flag(advert) + role + senderKey + fixed name.
+- Roles supported: Companion, Repeater, Room (Unknown fallback).
+- Incoming adverts populate “Discovered” contacts; each Contact tracks `role`, `isDiscovered`, `isFavorite`.
+- MesholaMsgService publishes ContactEvent on advert reception; UI can promote or favorite.
+
 ### Header Definition
 
 ```cpp

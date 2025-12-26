@@ -15,6 +15,8 @@
 | Integration testing | High | Ready | Build and test on hardware |
 | RadioLib SX1262 bring-up | High | In Progress | MeshCoreProtocol hardening for ESP-IDF |
 | Default Public channel wiring | High | In Progress | MeshCore “Public” channel (8b3387e9c5cdea6ac9e5edbaa115cd72) |
+| Advert discovery → Discovered list | High | In Progress | Parse adverts into contacts with role/favorite flags |
+| ContactsView grouping & favorites | High | In Progress | Group by role (Companion/Repeater/Room), favorites pinned |
 
 ### Up Next 📋
 
