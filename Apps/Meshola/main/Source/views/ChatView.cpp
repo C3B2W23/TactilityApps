@@ -1,6 +1,5 @@
 #include "ChatView.h"
-#include "mesh/MesholaMsgService.h"
-#include "storage/MessageStore.h"
+#include "service/MesholaMsgService.h"
 #include <cstring>
 #include <cstdio>
 
@@ -34,6 +33,7 @@ ChatView::ChatView()
     , _hasActiveChannel(false)
     , _sendCallback(nullptr)
     , _sendCallbackUserData(nullptr)
+    , _service(nullptr)
 {
     memset(&_activeContact, 0, sizeof(_activeContact));
     memset(&_activeChannel, 0, sizeof(_activeChannel));
@@ -41,6 +41,10 @@ ChatView::ChatView()
 
 ChatView::~ChatView() {
     destroy();
+}
+
+void ChatView::setService(std::shared_ptr<service::MesholaMsgService> service) {
+    _service = service;
 }
 
 void ChatView::create(lv_obj_t* parent) {
@@ -117,14 +121,15 @@ void ChatView::createWelcomeView() {
     lv_label_set_long_mode(instructions, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(instructions, LV_PCT(90));
     
-    // Node info
-    auto& mesholaMsgService = MesholaMsgService::getInstance();
-    auto* nodeInfo = lv_label_create(_welcomeView);
-    char nodeBuf[64];
-    snprintf(nodeBuf, sizeof(nodeBuf), "\nYour node: %s", mesholaMsgService.getNodeName());
-    lv_label_set_text(nodeInfo, nodeBuf);
-    lv_obj_set_style_text_color(nodeInfo, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(nodeInfo, &lv_font_montserrat_12, LV_STATE_DEFAULT);
+    // Node info (only if we have a service)
+    if (_service) {
+        auto* nodeInfo = lv_label_create(_welcomeView);
+        char nodeBuf[64];
+        snprintf(nodeBuf, sizeof(nodeBuf), "\nYour node: %s", _service->getNodeName());
+        lv_label_set_text(nodeInfo, nodeBuf);
+        lv_obj_set_style_text_color(nodeInfo, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
+        lv_obj_set_style_text_font(nodeInfo, &lv_font_montserrat_12, LV_STATE_DEFAULT);
+    }
 }
 
 void ChatView::createConversationView() {
@@ -367,10 +372,9 @@ void ChatView::setActiveContact(const Contact* contact) {
         createConversationView();
         clearMessageList();
         
-        // Load message history for this contact
-        auto& store = MessageStore::getInstance();
-        std::vector<Message> history;
-        if (store.loadContactMessages(contact->publicKey, 50, history)) {
+        // Load message history for this contact (via service)
+        if (_service) {
+            std::vector<Message> history = _service->getContactMessages(contact->publicKey, 50);
             for (const auto& msg : history) {
                 _messages.push_back(msg);
                 createMessageBubble(msg);
@@ -392,10 +396,9 @@ void ChatView::setActiveChannel(const Channel* channel) {
         createConversationView();
         clearMessageList();
         
-        // Load message history for this channel
-        auto& store = MessageStore::getInstance();
-        std::vector<Message> history;
-        if (store.loadChannelMessages(channel->id, 50, history)) {
+        // Load message history for this channel (via service)
+        if (_service) {
+            std::vector<Message> history = _service->getChannelMessages(channel->id, 50);
             for (const auto& msg : history) {
                 _messages.push_back(msg);
                 createMessageBubble(msg);

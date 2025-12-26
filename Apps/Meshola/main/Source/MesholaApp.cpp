@@ -178,20 +178,19 @@ void MesholaApp::showView(ViewType view) {
     
     switch (view) {
         case ViewType::Chat:
+            _chatView.setService(_mesholaMsgService);
             _chatView.create(_contentContainer);
             _chatView.setSendCallback(onSendMessage, this);
             if (_hasActiveContact) {
-                _chatView.setActiveContact(_activeContact);
-                refreshChatHistory();
+                _chatView.setActiveContact(&_activeContact);
             } else {
-                _chatView.showWelcome();
+                _chatView.clearActiveConversation();
             }
             break;
         case ViewType::Contacts:
+            _contactsView.setService(_mesholaMsgService);
             _contactsView.create(_contentContainer);
-            _contactsView.setSelectionCallback([this](const Contact& c) { onContactSelected(c); });
-            _contactsView.setAdvertiseCallback([this]() { if (_mesholaMsgService) _mesholaMsgService->sendAdvertisement(); });
-            refreshContactList();
+            _contactsView.setContactSelectedCallback([this](const Contact& c) { onContactSelected(c); });
             break;
         case ViewType::Channels:
             createChannelsViewPlaceholder();
@@ -231,18 +230,16 @@ void MesholaApp::onSendMessage(const char* text, void* userData) {
 
 void MesholaApp::refreshContactList() {
     if (!_mesholaMsgService) return;
-    auto contacts = _mesholaMsgService->getContacts();
+    
+    // ContactsView handles its own refresh via service pointer
     if (_currentView == ViewType::Contacts) {
-        _contactsView.clearContacts();
-        for (const auto& c : contacts) _contactsView.addContact(c);
+        _contactsView.refresh();
     }
 }
 
 void MesholaApp::refreshChatHistory() {
-    if (!_mesholaMsgService || !_hasActiveContact) return;
-    auto msgs = _mesholaMsgService->getContactMessages(_activeContact.publicKey, 100);
-    _chatView.clearMessages();
-    for (const auto& m : msgs) _chatView.addMessage(m);
+    // ChatView handles loading history internally via setActiveContact
+    // This method is now a no-op but kept for potential future use
 }
 
 void MesholaApp::createChannelsViewPlaceholder() {

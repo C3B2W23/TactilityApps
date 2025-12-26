@@ -49,6 +49,11 @@
 - [x] Created INTEGRATION.md with full ecosystem contracts
 - [x] Reserved shared data paths and formats
 - [x] Defined inter-app communication pattern (Maps → Messenger → MesholaMsgService)
+- [x] **FIXED: Views now receive service via setService()** instead of getInstance()
+- [x] Updated ChatView and ContactsView to accept service pointer from MesholaApp
+- [x] Fixed include paths (mesh/ → service/)
+- [x] Added recipientKey to Message struct for proper DM tracking
+- [x] **CODE REVIEW COMPLETED**: All components verified for consistency
 
 ---
 

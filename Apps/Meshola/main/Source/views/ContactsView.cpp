@@ -1,5 +1,5 @@
 #include "ContactsView.h"
-#include "mesh/MesholaMsgService.h"
+#include "service/MesholaMsgService.h"
 #include <cstring>
 #include <cstdio>
 #include <ctime>
@@ -25,11 +25,16 @@ ContactsView::ContactsView()
     , _broadcastBtn(nullptr)
     , _refreshBtn(nullptr)
     , _contactSelectedCallback(nullptr)
+    , _service(nullptr)
 {
 }
 
 ContactsView::~ContactsView() {
     destroy();
+}
+
+void ContactsView::setService(std::shared_ptr<service::MesholaMsgService> service) {
+    _service = service;
 }
 
 void ContactsView::create(lv_obj_t* parent) {
@@ -132,16 +137,15 @@ void ContactsView::createEmptyState() {
 }
 
 void ContactsView::refresh() {
-    if (!_contactList) return;
+    if (!_contactList || !_service) return;
     
-    // Get contacts from MesholaMsgService
-    auto& mesholaMsgService = MesholaMsgService::getInstance();
-    int count = mesholaMsgService.getContactCount();
+    // Get contacts from MesholaMsgService via service pointer
+    int count = _service->getContactCount();
     
     _contacts.clear();
     for (int i = 0; i < count; i++) {
         Contact contact;
-        if (mesholaMsgService.getContact(i, contact)) {
+        if (_service->getContact(i, contact)) {
             _contacts.push_back(contact);
         }
     }
@@ -319,8 +323,8 @@ void ContactsView::onRefreshPressed(lv_event_t* event) {
 
 void ContactsView::onBroadcastPressed(lv_event_t* event) {
     auto* view = static_cast<ContactsView*>(lv_event_get_user_data(event));
-    if (view) {
-        MesholaMsgService::getInstance().sendAdvertisement();
+    if (view && view->_service) {
+        view->_service->sendAdvertisement();
         // Could show a brief "Sent!" indicator here
     }
 }

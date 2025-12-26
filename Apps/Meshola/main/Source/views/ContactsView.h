@@ -4,6 +4,12 @@
 #include <lvgl.h>
 #include <vector>
 #include <functional>
+#include <memory>
+
+// Forward declaration to avoid circular include
+namespace meshola::service {
+    class MesholaMsgService;
+}
 
 namespace meshola {
 
@@ -16,6 +22,9 @@ namespace meshola {
  * - Broadcast advertisement button
  * - Refresh button
  * - Sort options (name, signal, last seen)
+ * 
+ * NOTE: This view receives its service pointer from MesholaApp.
+ * It does NOT access the service via singleton/getInstance().
  */
 class ContactsView {
 public:
@@ -23,6 +32,12 @@ public:
     
     ContactsView();
     ~ContactsView();
+    
+    /**
+     * Set the service pointer. Must be called before create().
+     * The service is owned by MesholaApp, not this view.
+     */
+    void setService(std::shared_ptr<service::MesholaMsgService> service);
     
     /**
      * Create the view UI.
@@ -91,6 +106,9 @@ private:
     static void onContactPressed(lv_event_t* event);
     static void onBroadcastPressed(lv_event_t* event);
     static void onRefreshPressed(lv_event_t* event);
+    
+    // Service pointer (owned by MesholaApp, not us)
+    std::shared_ptr<service::MesholaMsgService> _service;
 };
 
 } // namespace meshola

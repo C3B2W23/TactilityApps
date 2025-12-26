@@ -105,8 +105,9 @@ struct Channel {
  * Message structure
  */
 struct Message {
-    uint8_t senderKey[PUBLIC_KEY_SIZE];  // For DM
-    uint8_t channelId[CHANNEL_ID_SIZE];  // For channel msg (if applicable)
+    uint8_t senderKey[PUBLIC_KEY_SIZE];     // Sender's public key
+    uint8_t recipientKey[PUBLIC_KEY_SIZE];  // Recipient's public key (for DMs)
+    uint8_t channelId[CHANNEL_ID_SIZE];     // For channel msg (if applicable)
     char senderName[MAX_NODE_NAME_LEN];
     char text[MAX_MESSAGE_LEN];
     uint32_t timestamp;
