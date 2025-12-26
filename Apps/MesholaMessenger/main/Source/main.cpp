@@ -16,9 +16,11 @@ const tt::app::AppManifest manifest = {
 
 } // namespace meshola
 
+#ifndef MESHOLA_MESSENGER_EMBED
 extern "C" void app_main(void) {
     extern void compat_force_link(void);
     compat_force_link(); // ensure compat stubs are linked for app ELF packaging
 
     tt::app::addAppManifest(meshola::manifest);
 }
+#endif

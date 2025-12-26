@@ -174,9 +174,11 @@ Getting a standalone MesholaMessenger app ELF to link required custom HAL glue, 
 
 ### Rebuild recipe (known-good)
 ```bash
-export TACTILITY_SDK_PATH=./Tactility/release/TactilitySDK/0.7.0-dev-/TactilitySDK
-source ./esp-idf/export.sh
-cd ./TactilityApps/Apps/MesholaMessenger
+# Adjust REPO_ROOT to your local clone of C3B2W23
+export REPO_ROOT=/path/to/C3B2W23
+export TACTILITY_SDK_PATH="${REPO_ROOT}/Tactility/release/TactilitySDK/0.7.0-dev-/TactilitySDK"
+source "${REPO_ROOT}/esp-idf/export.sh"
+cd "${REPO_ROOT}/TactilityApps/Apps/MesholaMessenger"
 # ensure sdkconfig has single_app_large + 16MB flash
 idf.py build
 # flash example:
