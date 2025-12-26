@@ -1,6 +1,10 @@
 #pragma once
 
 #include "IProtocol.h"
+#include <cstring>
+#include <cstdint>
+#include <array>
+#include <vector>
 
 namespace meshola {
 
@@ -31,6 +35,8 @@ public:
     bool setNodeName(const char* name) override;
     void getPublicKey(uint8_t out[PUBLIC_KEY_SIZE]) const override;
     bool sendAdvertisement() override;
+    void setLocalIdentity(const uint8_t publicKey[PUBLIC_KEY_SIZE],
+                          const char* name) override;
 
     // Messaging
     uint32_t sendMessage(const Contact& to, const char* text) override;
@@ -87,7 +93,34 @@ private:
 #ifdef ESP_PLATFORM
     Module* _module = nullptr;
     SX1262* _radio = nullptr;
+    bool _rxListening = false;
 #endif
+
+    // Local identity cached for framing
+    uint8_t _selfPublicKey[PUBLIC_KEY_SIZE]{};
+    char _selfName[MAX_NODE_NAME_LEN]{};
+    bool _hasSelfKey = false;
+
+    // Packet framing helpers
+    static constexpr uint8_t PACKET_MAGIC_0 = 0x4d; // 'M'
+    static constexpr uint8_t PACKET_MAGIC_1 = 0x4c; // 'L'
+    static constexpr uint8_t PACKET_VERSION = 0x01;
+    static constexpr uint8_t PACKET_FLAG_CHANNEL = 0x01;
+
+    bool buildPacket(const char* text,
+                     const uint8_t channelId[CHANNEL_ID_SIZE],
+                     const uint8_t recipientKey[PUBLIC_KEY_SIZE],
+                     bool isChannel,
+                     uint8_t* outBuf,
+                     size_t& outLen) const;
+    bool parsePacket(const uint8_t* data,
+                     size_t len,
+                     Message& outMsg) const;
+
+    // Default public channel (MeshCore default)
+    Channel _defaultChannel{};
+    // Synthetic contacts list (e.g., defaults)
+    std::vector<Contact> _contacts;
     // MeshCore integration placeholder
     // BaseChatMesh* _mesh = nullptr;
 };
