@@ -8,7 +8,7 @@
 
 **Discovery:** Tactility OS has a Service system separate from Apps. Services run in the background and persist across app switches. This is critical for a messenger app - without it, radio stops when user switches apps.
 
-**Impact:** MeshService must be rewritten as a Tactility Service (not part of the app). This enables:
+**Impact:** MesholaMsgService must be rewritten as a Tactility Service (not part of the app). This enables:
 - Background message reception
 - Shared service between Meshola Messenger and Meshola Maps
 - Proper mesh network participation
@@ -54,7 +54,7 @@ Create a professional-grade mesh messaging application that:
 - [x] Settings view with profile switching
 - [x] ContactsView with peer list
 ### In Progress (v0.1.5) - CRITICAL
-- [ ] **Rewrite MeshService as Tactility Service**
+- [ ] **Rewrite MesholaMsgService as Tactility Service**
 - [ ] Implement PubSub event system
 - [ ] Refactor app to subscribe to service
 - [ ] Enable background message reception
@@ -64,7 +64,7 @@ Create a professional-grade mesh messaging application that:
 - [ ] Actual MeshCore protocol integration
 - [ ] Radio initialization
 ### Future
-- [ ] Meshola Maps integration (shares MeshService)
+- [ ] Meshola Maps integration (shares MesholaMsgService)
 - [ ] Meshtastic protocol support
 - [ ] Custom fork protocol
 - [ ] Message search

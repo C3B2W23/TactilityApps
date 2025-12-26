@@ -24,7 +24,7 @@
 **Status:** In Progress (December 25, 2024)
 
 **Why This Is Critical:**
-The original architecture had MeshService as part of the app. This means the radio stops when the user switches to any other app (Settings, Launcher, Maps, etc.). This makes the messenger completely non-functional as a background service.
+The original architecture had MesholaMsgService as part of the app. This means the radio stops when the user switches to any other app (Settings, Launcher, Maps, etc.). This makes the messenger completely non-functional as a background service.
 
 **Discovery:** Tactility OS has a **Service** system that runs independently of apps:
 - Services persist across app switches
@@ -33,17 +33,17 @@ The original architecture had MeshService as part of the app. This means the rad
 - Apps subscribe to Service events via PubSub
 
 **Tasks:**
-- [ ] Create MeshService as a Tactility Service (not app component)
+- [ ] Create MesholaMsgService as a Tactility Service (not app component)
 - [ ] Implement PubSub event types (MessageEvent, ContactEvent, StatusEvent)
-- [ ] Move ProfileManager, MessageStore, IProtocol into MeshService
+- [ ] Move ProfileManager, MessageStore, IProtocol into MesholaMsgService
 - [ ] Implement background thread for radio loop
 - [ ] Refactor MesholaApp to be thin UI layer
-- [ ] App subscribes to MeshService PubSub on show
+- [ ] App subscribes to MesholaMsgService PubSub on show
 - [ ] App unsubscribes on hide
 - [ ] Test message reception while in other apps
 
 **Deliverables:**
-- MeshService runs independently of app lifecycle
+- MesholaMsgService runs independently of app lifecycle
 - Messages received while user is in other apps
 - Foundation ready for Meshola Maps integration
 
@@ -60,7 +60,7 @@ The original architecture had MeshService as part of the app. This means the rad
 - [x] MeshCoreProtocol stub
 - [x] Profile system (create, switch, delete)
 - [x] Per-profile identity (keypairs, node name)
-- [x] MeshService singleton (⚠️ needs revision to Tactility Service)
+- [x] MesholaMsgService singleton (⚠️ needs revision to Tactility Service)
 - [x] ChatView with message bubbles
 - [x] Message persistence (JSON Lines)
 - [x] Bottom navigation UI

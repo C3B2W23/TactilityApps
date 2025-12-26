@@ -1,6 +1,6 @@
 #pragma once
 
-#include "protocol/IProtocol.h"
+#include "../protocol/IProtocol.h"
 #include <vector>
 #include <cstdint>
 
@@ -16,13 +16,13 @@ namespace meshola {
  * /data/meshola/messenger/profiles/{profileId}/messages/
  *   ├── dm_{contactKeyHex}.jsonl    # DMs with specific contact
  *   └── ch_{channelIdHex}.jsonl     # Channel messages
+ * 
+ * Note: This class is owned by MesholaMsgService, not a singleton.
  */
 class MessageStore {
 public:
-    /**
-     * Get singleton instance.
-     */
-    static MessageStore& getInstance();
+    MessageStore();
+    ~MessageStore();
     
     /**
      * Set the active profile ID.
@@ -60,6 +60,24 @@ public:
                              std::vector<Message>& outMessages);
     
     /**
+     * Get messages for a contact (convenience method).
+     * @param publicKey Contact's public key
+     * @param maxMessages Maximum messages (0 = all)
+     * @return Vector of messages, newest last
+     */
+    std::vector<Message> getContactMessages(const uint8_t publicKey[PUBLIC_KEY_SIZE],
+                                            int maxMessages = 0);
+    
+    /**
+     * Get messages for a channel (convenience method).
+     * @param channelId Channel ID  
+     * @param maxMessages Maximum messages (0 = all)
+     * @return Vector of messages, newest last
+     */
+    std::vector<Message> getChannelMessages(const uint8_t channelId[CHANNEL_ID_SIZE],
+                                            int maxMessages = 0);
+    
+    /**
      * Get count of messages for a contact.
      */
     int getContactMessageCount(const uint8_t publicKey[PUBLIC_KEY_SIZE]);
@@ -85,9 +103,6 @@ public:
     bool deleteAllMessages();
 
 private:
-    MessageStore();
-    ~MessageStore();
-    
     // Non-copyable
     MessageStore(const MessageStore&) = delete;
     MessageStore& operator=(const MessageStore&) = delete;

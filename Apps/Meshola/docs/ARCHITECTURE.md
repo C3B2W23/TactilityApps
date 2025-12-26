@@ -10,7 +10,7 @@
 1. [System Overview](#system-overview)
 2. [Tactility Service vs App Model](#tactility-service-vs-app-model)
 3. [Component Architecture](#component-architecture)
-4. [MeshService (Tactility Service)](#meshservice-tactility-service)
+4. [MesholaMsgService (Tactility Service)](#meshservice-tactility-service)
 5. [Meshola Messenger (Tactility App)](#meshola-messenger-tactility-app)
 6. [Data Flow](#data-flow)
 7. [Storage Architecture](#storage-architecture)
@@ -32,7 +32,7 @@
 ├─────────────────────────────────────────────────────────────────────────┤
 │  SERVICES (Always Running - Persist Across App Switches)                 │
 │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────────────┐   │
-│  │ WifiService│ │ GpsService │ │ GuiService │ │    MeshService      │   │
+│  │ WifiService│ │ GpsService │ │ GuiService │ │    MesholaMsgService      │   │
 │  │ (built-in) │ │ (built-in) │ │ (built-in) │ │    (NEW - Ours)     │   │
 │  │            │ │            │ │            │ │                     │   │
 │  │            │ │ Coordinates│ │            │ │ • Radio RX/TX       │   │
@@ -50,7 +50,7 @@
 │  │ • Channels        │  │ • Track Routes    │  │                   │    │
 │  │ • Settings        │  │                   │  │                   │    │
 │  │                   │  │                   │  │                   │    │
-│  │ Uses: MeshService │  │ Uses: MeshService │  │                   │    │
+│  │ Uses: MesholaMsgService │  │ Uses: MesholaMsgService │  │                   │    │
 │  │       GpsService  │  │       GpsService  │  │                   │    │
 │  └───────────────────┘  └───────────────────┘  └───────────────────┘    │
 ├─────────────────────────────────────────────────────────────────────────┤
@@ -62,7 +62,7 @@
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key Insight:** Messages are received even when user is in Maps, Settings, or Launcher because MeshService runs continuously as a Tactility Service.
+**Key Insight:** Messages are received even when user is in Maps, Settings, or Launcher because MesholaMsgService runs continuously as a Tactility Service.
 
 ---
 
@@ -123,10 +123,10 @@ struct AppManifest {
 
 | Component | Type | Purpose | Persists Across App Switch? |
 |-----------|------|---------|----------------------------|
-| **MeshService** | Tactility Service | Radio, messaging, contacts | ✅ YES |
-| **ProfileManager** | Within MeshService | Identity/config management | ✅ YES |
-| **MessageStore** | Within MeshService | Message persistence | ✅ YES |
-| **IProtocol** | Within MeshService | Protocol abstraction | ✅ YES |
+| **MesholaMsgService** | Tactility Service | Radio, messaging, contacts | ✅ YES |
+| **ProfileManager** | Within MesholaMsgService | Identity/config management | ✅ YES |
+| **MessageStore** | Within MesholaMsgService | Message persistence | ✅ YES |
+| **IProtocol** | Within MesholaMsgService | Protocol abstraction | ✅ YES |
 | **Meshola Messenger** | Tactility App | Chat UI | ❌ No (recreated) |
 | **Meshola Maps** | Tactility App | Map UI | ❌ No (recreated) |
 
@@ -134,7 +134,7 @@ struct AppManifest {
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    MeshService (Tactility Service)               │
+│                    MesholaMsgService (Tactility Service)               │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │                    Public API                            │    │
 │  │  • sendMessage()      • getContacts()                   │    │
@@ -160,7 +160,7 @@ struct AppManifest {
 │                    └──────────┘ └──────────┘ └──────────┘ │    │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ findMeshService()
+                              │ findMesholaMsgService()
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         APPS                                     │
@@ -177,12 +177,12 @@ struct AppManifest {
 
 ---
 
-## MeshService (Tactility Service)
+## MesholaMsgService (Tactility Service)
 
 ### Header Definition
 
 ```cpp
-// service/mesh/MeshService.h
+// service/mesh/MesholaMsgService.h
 #pragma once
 
 #include "Tactility/Mutex.h"
@@ -213,7 +213,7 @@ struct StatusEvent {
     int pendingMessageCount;
 };
 
-class MeshService final : public tt::service::Service {
+class MesholaMsgService final : public tt::service::Service {
 
     tt::Mutex mutex = tt::Mutex(tt::Mutex::Type::Recursive);
     
@@ -274,7 +274,7 @@ public:
 };
 
 // Global accessor
-std::shared_ptr<MeshService> findMeshService();
+std::shared_ptr<MesholaMsgService> findMesholaMsgService();
 
 // Service manifest
 extern const tt::service::ServiceManifest manifest;
@@ -285,18 +285,18 @@ extern const tt::service::ServiceManifest manifest;
 ### Service Registration
 
 ```cpp
-// service/mesh/MeshService.cpp
+// service/mesh/MesholaMsgService.cpp
 
 namespace meshola::service {
 
 extern const tt::service::ServiceManifest manifest = {
     .id = "Mesh",
-    .createService = tt::service::create<MeshService>
+    .createService = tt::service::create<MesholaMsgService>
 };
 
-std::shared_ptr<MeshService> findMeshService() {
+std::shared_ptr<MesholaMsgService> findMesholaMsgService() {
     auto service = tt::service::findServiceById(manifest.id);
-    return std::static_pointer_cast<MeshService>(service);
+    return std::static_pointer_cast<MesholaMsgService>(service);
 }
 
 } // namespace meshola::service
@@ -305,7 +305,7 @@ std::shared_ptr<MeshService> findMeshService() {
 ### Lifecycle
 
 ```cpp
-bool MeshService::onStart(ServiceContext& serviceContext) {
+bool MesholaMsgService::onStart(ServiceContext& serviceContext) {
     auto lock = mutex.asScopedLock();
     lock.lock();
     
@@ -335,13 +335,13 @@ bool MeshService::onStart(ServiceContext& serviceContext) {
         });
     }
     
-    TT_LOG_I("MeshService", "Started");
+    TT_LOG_I("MesholaMsgService", "Started");
     return true;
 }
 
-void MeshService::onStop(ServiceContext& serviceContext) {
+void MesholaMsgService::onStop(ServiceContext& serviceContext) {
     stopRadio();
-    TT_LOG_I("MeshService", "Stopped");
+    TT_LOG_I("MesholaMsgService", "Stopped");
 }
 ```
 
@@ -351,22 +351,22 @@ void MeshService::onStop(ServiceContext& serviceContext) {
 
 ### App Structure (Simplified)
 
-The app is now much simpler - it's just UI that talks to MeshService:
+The app is now much simpler - it's just UI that talks to MesholaMsgService:
 
 ```cpp
 // MesholaApp.cpp
 
 #include "MesholaApp.h"
-#include "service/mesh/MeshService.h"
+#include "service/mesh/MesholaMsgService.h"
 
 void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
     _handle = handle;
     
     // Get the mesh service
-    _meshService = meshola::service::findMeshService();
+    _mesholaMsgService = meshola::service::findMesholaMsgService();
     
     // Subscribe to message events
-    _messageSubscription = _meshService->getMessagePubSub()->subscribe(
+    _messageSubscription = _mesholaMsgService->getMessagePubSub()->subscribe(
         [this](const MessageEvent& event) {
             tt_lvgl_lock();
             if (event.isNew) {
@@ -377,7 +377,7 @@ void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
     );
     
     // Subscribe to contact events
-    _contactSubscription = _meshService->getContactPubSub()->subscribe(
+    _contactSubscription = _mesholaMsgService->getContactPubSub()->subscribe(
         [this](const ContactEvent& event) {
             tt_lvgl_lock();
             refreshContactList();
@@ -395,8 +395,8 @@ void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
 
 void MesholaApp::onHide(AppHandle handle) {
     // Unsubscribe from PubSub
-    _meshService->getMessagePubSub()->unsubscribe(_messageSubscription);
-    _meshService->getContactPubSub()->unsubscribe(_contactSubscription);
+    _mesholaMsgService->getMessagePubSub()->unsubscribe(_messageSubscription);
+    _mesholaMsgService->getContactPubSub()->unsubscribe(_contactSubscription);
     
     // UI cleanup handled by LVGL parent destruction
 }
@@ -404,7 +404,7 @@ void MesholaApp::onHide(AppHandle handle) {
 void MesholaApp::onSendMessage(const char* text) {
     if (_activeContact) {
         uint32_t ackId;
-        _meshService->sendMessage(_activeContact->publicKey, text, ackId);
+        _mesholaMsgService->sendMessage(_activeContact->publicKey, text, ackId);
     }
 }
 ```
@@ -416,7 +416,7 @@ void MesholaApp::onSendMessage(const char* text) {
 ### Message Reception (Background)
 
 ```
-Radio RX ──► IProtocol.loop() ──► MeshService.onMessageReceived()
+Radio RX ──► IProtocol.loop() ──► MesholaMsgService.onMessageReceived()
                                          │
                                          ├──► MessageStore.appendMessage()
                                          │
@@ -434,7 +434,7 @@ Radio RX ──► IProtocol.loop() ──► MeshService.onMessageReceived()
 [User taps Send] ──► MesholaApp.onSendMessage()
                               │
                               ▼
-                     MeshService.sendMessage()
+                     MesholaMsgService.sendMessage()
                               │
                               ├──► IProtocol.sendMessage() ──► Radio TX
                               │
@@ -449,7 +449,7 @@ Radio RX ──► IProtocol.loop() ──► MeshService.onMessageReceived()
 User in Messenger ──► User opens Maps ──► Message arrives
         │                    │                   │
         ▼                    ▼                   ▼
-  Messenger.onHide()   Maps.onShow()      MeshService receives
+  Messenger.onHide()   Maps.onShow()      MesholaMsgService receives
   (unsubscribe)        (subscribe)        (stores message)
                                           (publishes to Maps)
                                                  │
@@ -458,7 +458,7 @@ User returns to Messenger                        ▼
         ▼                               (optional)
   Messenger.onShow()
   (subscribe)
-  (load messages from MeshService)
+  (load messages from MesholaMsgService)
 ```
 
 ---
@@ -469,7 +469,7 @@ User returns to Messenger                        ▼
 
 ```
 /data/meshola/
-├── service/                         # MeshService data
+├── service/                         # MesholaMsgService data
 │   ├── profiles.json                # Profile list + active ID
 │   └── profiles/
 │       ├── {profileId}/
@@ -489,24 +489,24 @@ User returns to Messenger                        ▼
 
 | Data | Owner | Reason |
 |------|-------|--------|
-| Profiles | MeshService | Shared across apps |
-| Contacts | MeshService | Shared across apps |
-| Channels | MeshService | Shared across apps |
-| Messages | MeshService | Must persist during app switches |
+| Profiles | MesholaMsgService | Shared across apps |
+| Contacts | MesholaMsgService | Shared across apps |
+| Channels | MesholaMsgService | Shared across apps |
+| Messages | MesholaMsgService | Must persist during app switches |
 | UI preferences | Each App | App-specific |
 
 ---
 
 ## Protocol Abstraction
 
-Same as before, but now lives within MeshService:
+Same as before, but now lives within MesholaMsgService:
 
 ```cpp
 class IProtocol {
     virtual bool init(const RadioConfig& config) = 0;
     virtual bool start() = 0;
     virtual void stop() = 0;
-    virtual void loop() = 0;  // Called by MeshService background thread
+    virtual void loop() = 0;  // Called by MesholaMsgService background thread
     
     virtual uint32_t sendMessage(const Contact& to, const char* text) = 0;
     virtual void setMessageCallback(MessageCallback cb) = 0;
@@ -518,25 +518,25 @@ class IProtocol {
 
 ## PubSub Event System
 
-Tactility provides a PubSub system for event broadcasting. MeshService uses this pattern (learned from GpsService):
+Tactility provides a PubSub system for event broadcasting. MesholaMsgService uses this pattern (learned from GpsService):
 
 ```cpp
 // Creating PubSub
 std::shared_ptr<PubSub<MessageEvent>> messagePubSub = std::make_shared<PubSub<MessageEvent>>();
 
-// Publishing events (from MeshService)
+// Publishing events (from MesholaMsgService)
 MessageEvent event = { .message = msg, .isNew = true };
 messagePubSub->publish(event);
 
 // Subscribing (from Apps)
-auto subscriptionId = meshService->getMessagePubSub()->subscribe(
+auto subscriptionId = mesholaMsgService->getMessagePubSub()->subscribe(
     [](const MessageEvent& event) {
         // Handle new message
     }
 );
 
 // Unsubscribing (on app hide)
-meshService->getMessagePubSub()->unsubscribe(subscriptionId);
+mesholaMsgService->getMessagePubSub()->unsubscribe(subscriptionId);
 ```
 
 ---
@@ -547,7 +547,7 @@ meshService->getMessagePubSub()->unsubscribe(subscriptionId);
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    MeshService Thread                        │
+│                    MesholaMsgService Thread                        │
 │                    (Background - Always Running)             │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -579,15 +579,15 @@ meshService->getMessagePubSub()->unsubscribe(subscriptionId);
 ### Thread Safety
 
 ```cpp
-// MeshService methods use internal mutex
-bool MeshService::sendMessage(...) {
+// MesholaMsgService methods use internal mutex
+bool MesholaMsgService::sendMessage(...) {
     auto lock = mutex.asScopedLock();
     lock.lock();
     // ... thread-safe operations
 }
 
 // PubSub callbacks in apps must lock LVGL
-_meshService->getMessagePubSub()->subscribe([this](const MessageEvent& event) {
+_mesholaMsgService->getMessagePubSub()->subscribe([this](const MessageEvent& event) {
     tt_lvgl_lock();
     _chatView.addMessage(event.message);
     tt_lvgl_unlock();
@@ -638,15 +638,86 @@ lv_obj_t* parent (from Tactility)
 
 ## Future: Meshola Maps Integration
 
-Both apps share MeshService:
+### Architecture Decision
+
+**Meshola Maps will communicate with Meshola Messenger, NOT directly with MesholaMsgService.**
+
+```
+┌─────────────────┐         ┌─────────────────────┐
+│  Meshola Maps   │ ◄─────► │  Meshola Messenger  │
+│                 │   IPC   │                     │
+│  • Map display  │         │  • MesholaMsgService│
+│  • Location UI  │         │  • ProfileManager   │
+│  • Waypoints    │         │  • MessageStore     │
+│  • Track routes │         │  • All mesh logic   │
+└─────────────────┘         └─────────────────────┘
+```
+
+### Rationale
+
+1. **Single source of truth** - Messenger owns all mesh state and profile management
+2. **No code duplication** - Maps doesn't need its own mesh handling
+3. **Simplified Maps** - Maps just requests data, doesn't manage profiles/protocols
+4. **Independent development** - Maps can be built without understanding MesholaMsgService internals
+5. **Install simplicity** - Users install Messenger first, Maps is optional add-on
+
+### Reserved Paths
+
+```
+/data/meshola/
+├── messenger/           # Messenger's private data (CURRENT)
+│   ├── profiles/
+│   └── messages/
+├── shared/              # RESERVED for cross-app data (FUTURE)
+│   ├── contacts.json    # Contact list with locations
+│   ├── locations.json   # Real-time location updates
+│   └── requests/        # Inter-app request queue
+└── maps/                # RESERVED for Maps app (FUTURE)
+    ├── tracks/          # Saved routes
+    └── waypoints/       # Saved locations
+```
+
+### Future Integration API (Conceptual)
+
+Maps will request data from Messenger via shared files or Tactility IPC:
+
+```
+Maps → Messenger Requests:
+├── getContacts()              → Contact list with lat/lon
+├── getContactLocations()      → Just location data (lightweight)
+├── sendWaypoint(contact, loc) → Share a location via mesh
+├── subscribeLocationUpdates() → Get notified of position changes
+└── getMyNodeInfo()            → Current node name/key (no profile details)
+```
+
+Maps does NOT need access to:
+- Radio configuration
+- Protocol internals  
+- Profile switching/management
+- Message history
+- Channel management
+
+### Implementation Notes (For Future)
+
+When building Maps integration:
+
+1. **Messenger exports** - Add periodic write of contacts/locations to `/data/meshola/shared/`
+2. **Request handling** - Messenger watches `/data/meshola/shared/requests/` for Maps requests
+3. **Response format** - Define JSON schemas for all shared data
+4. **Update frequency** - Location updates on contact advertisement receive
+5. **Cleanup** - Processed requests deleted after handling
+
+This architecture allows Maps to be 100% independent while still leveraging all mesh functionality through Messenger as the gateway.
+
+Both apps share MesholaMsgService:
 
 ```cpp
 // In Meshola Maps
 void MesholaMapsApp::onShow(...) {
-    _meshService = meshola::service::findMeshService();
+    _mesholaMsgService = meshola::service::findMesholaMsgService();
     
     // Subscribe to contact updates (for location pins)
-    _contactSub = _meshService->getContactPubSub()->subscribe(
+    _contactSub = _mesholaMsgService->getContactPubSub()->subscribe(
         [this](const ContactEvent& event) {
             if (event.contact.hasLocation) {
                 updateMapPin(event.contact);
@@ -666,7 +737,7 @@ void MesholaMapsApp::onShow(...) {
 
 1. **Tactility Services persist across app switches** - Critical for background radio operation
 2. **Tactility uses PubSub for event broadcasting** - Apps subscribe to service events
-3. **GpsService is the reference implementation** - Our MeshService follows the same pattern
+3. **GpsService is the reference implementation** - Our MesholaMsgService follows the same pattern
 4. **One app foreground at a time** - Apps have onShow/onHide lifecycle
 5. **Services can be found from anywhere** - `findServiceById()` pattern
 6. **Thread safety via Mutex** - Both services and LVGL require locking

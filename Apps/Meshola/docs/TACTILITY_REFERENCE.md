@@ -32,7 +32,7 @@ Tactility has TWO distinct component types:
 
 ### Why This Matters
 
-For a messenger app, the radio must run in background to receive messages. If radio is part of the app, it stops when user switches to Settings or Launcher. **MeshService must be a Tactility Service.**
+For a messenger app, the radio must run in background to receive messages. If radio is part of the app, it stops when user switches to Settings or Launcher. **MesholaMsgService must be a Tactility Service.**
 
 ---
 

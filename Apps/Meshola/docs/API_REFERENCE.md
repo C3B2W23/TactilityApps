@@ -9,7 +9,7 @@
 
 1. [Data Types](#data-types)
 2. [IProtocol Interface](#iprotocol-interface)
-3. [MeshService](#meshservice)
+3. [MesholaMsgService](#meshservice)
 4. [ProfileManager](#profilemanager)
 5. [MessageStore](#messagestore)
 6. [ChatView](#chatview)
@@ -280,14 +280,14 @@ virtual bool loadState() = 0;
 
 ---
 
-## MeshService
+## MesholaMsgService
 
-Singleton service managing protocol lifecycle. Defined in `mesh/MeshService.h`.
+Singleton service managing protocol lifecycle. Defined in `mesh/MesholaMsgService.h`.
 
 ### Getting Instance
 
 ```cpp
-MeshService& service = MeshService::getInstance();
+MesholaMsgService& service = MesholaMsgService::getInstance();
 ```
 
 ### Initialization

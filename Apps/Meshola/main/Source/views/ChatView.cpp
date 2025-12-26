@@ -1,5 +1,5 @@
 #include "ChatView.h"
-#include "mesh/MeshService.h"
+#include "mesh/MesholaMsgService.h"
 #include "storage/MessageStore.h"
 #include <cstring>
 #include <cstdio>
@@ -118,10 +118,10 @@ void ChatView::createWelcomeView() {
     lv_obj_set_width(instructions, LV_PCT(90));
     
     // Node info
-    auto& meshService = MeshService::getInstance();
+    auto& mesholaMsgService = MesholaMsgService::getInstance();
     auto* nodeInfo = lv_label_create(_welcomeView);
     char nodeBuf[64];
-    snprintf(nodeBuf, sizeof(nodeBuf), "\nYour node: %s", meshService.getNodeName());
+    snprintf(nodeBuf, sizeof(nodeBuf), "\nYour node: %s", mesholaMsgService.getNodeName());
     lv_label_set_text(nodeInfo, nodeBuf);
     lv_obj_set_style_text_color(nodeInfo, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(nodeInfo, &lv_font_montserrat_12, LV_STATE_DEFAULT);

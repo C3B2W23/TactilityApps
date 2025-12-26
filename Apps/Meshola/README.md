@@ -26,7 +26,7 @@ Meshola Messenger is a protocol-agnostic mesh networking client for the LilyGo T
 │       └────────────┴────────────┴────────────────┘              │
 │                            │                                    │
 │                    ┌───────▼───────┐                           │
-│                    │  MeshService  │  (Background Thread)       │
+│                    │  MesholaMsgService  │  (Background Thread)       │
 │                    └───────┬───────┘                           │
 └────────────────────────────┼────────────────────────────────────┘
                              │
@@ -108,7 +108,7 @@ MesholaMessenger/
 │       │   ├── ProtocolRegistry.cpp
 │       │   └── MeshCoreProtocol.h/cpp
 │       ├── mesh/
-│       │   └── MeshService.h/cpp  # Background service
+│       │   └── MesholaMsgService.h/cpp  # Background service
 │       └── views/                 # (TODO) Full view classes
 └── lib/                           # (TODO) Protocol libraries
 ```
@@ -142,7 +142,7 @@ python tactility.py build
 - [x] Protocol abstraction layer (IProtocol)
 - [x] Protocol registry (runtime switching)
 - [x] MeshCore protocol stub
-- [x] MeshService (background thread)
+- [x] MesholaMsgService (background thread)
 - [x] Main app with navigation
 - [x] Placeholder views (Chat, Peers, Channels, Settings)
 - [x] Rebranded as Meshola Messenger

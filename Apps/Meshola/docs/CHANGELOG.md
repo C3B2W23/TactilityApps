@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### CRITICAL: Architectural Revision Required
 **Discovery Date:** December 25, 2024
 
-**Problem Identified:** Original architecture had MeshService as part of the app. This means:
+**Problem Identified:** Original architecture had MesholaMsgService as part of the app. This means:
 - Radio stops when user switches to another app
 - No background message reception
 - App is useless as a messenger
@@ -24,10 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GpsService provides reference implementation
 
 **Impact:**
-- MeshService must be rewritten as a Tactility Service
+- MesholaMsgService must be rewritten as a Tactility Service
 - App becomes thin UI layer that subscribes to Service
 - Enables background message reception
-- Enables Meshola Maps to share the same MeshService
+- Enables Meshola Maps to share the same MesholaMsgService
 
 ### Added
 - **ContactsView** - Full peer list view with:
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Storage path changed to `/data/meshola/messenger/` for future app compatibility
 
 ### Planned (Revised)
-- **Rewrite MeshService as Tactility Service** (CRITICAL)
+- **Rewrite MesholaMsgService as Tactility Service** (CRITICAL)
 - Implement PubSub events (MessageEvent, ContactEvent, StatusEvent)
 - Refactor MesholaApp to be thin UI layer
 - ChannelsView - channel management UI
@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Separate files per contact/channel
   - Load last 50 messages on conversation open
 
-- **Background Service** (`MeshService`)
+- **Background Service** (`MesholaMsgService`)
   - Singleton pattern
   - Profile-aware initialization
   - Event forwarding to UI callbacks
@@ -155,7 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Defined IProtocol interface
 - Implemented ProtocolRegistry
 - Created MeshCoreProtocol stub
-- Built MeshService skeleton
+- Built MesholaMsgService skeleton
 - Created MesholaApp with navigation
 - Added placeholder views
 
@@ -174,7 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `ProfileManager` singleton
 - Added profile creation, switching, deletion
 - JSON serialization for profile settings
-- Updated MeshService for profile-aware init
+- Updated MesholaMsgService for profile-aware init
 - Added profile dropdown in Settings
 
 **Session 5: ChatView**

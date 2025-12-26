@@ -90,8 +90,8 @@ Meshola/
         │   └── MessageStore.cpp
         │
         ├── mesh/               # Background service
-        │   ├── MeshService.h
-        │   └── MeshService.cpp
+        │   ├── MesholaMsgService.h
+        │   └── MesholaMsgService.cpp
         │
         └── views/              # UI components
             ├── ChatView.h
@@ -104,7 +104,7 @@ Meshola/
 |------|---------|
 | `IProtocol.h` | Protocol interface + all data types (Message, Contact, Channel, etc.) |
 | `Profile.h` | Profile struct + ProfileManager class |
-| `MeshService.h` | Singleton service managing protocol lifecycle |
+| `MesholaMsgService.h` | Singleton service managing protocol lifecycle |
 | `MessageStore.h` | Message persistence with JSON Lines |
 | `MesholaApp.h` | Main app with navigation and event routing |
 | `ChatView.h` | Messaging UI implementation |
@@ -155,12 +155,12 @@ build/
 
 | Element | Style | Example |
 |---------|-------|---------|
-| Classes | PascalCase | `MeshService`, `ChatView` |
+| Classes | PascalCase | `MesholaMsgService`, `ChatView` |
 | Methods | camelCase | `sendMessage()`, `getNodeName()` |
 | Member variables | _camelCase | `_protocol`, `_messageCallback` |
 | Constants | UPPER_SNAKE | `MAX_MESSAGE_LEN`, `COLOR_ACCENT` |
 | Namespaces | lowercase | `meshola` |
-| Files | PascalCase | `MeshService.cpp`, `IProtocol.h` |
+| Files | PascalCase | `MesholaMsgService.cpp`, `IProtocol.h` |
 
 ### Code Organization
 
@@ -269,8 +269,8 @@ IProtocol* MyProtocol::create() {
 ### 3. Register at Startup
 
 ```cpp
-// In MeshService constructor
-MeshService::MeshService() {
+// In MesholaMsgService constructor
+MesholaMsgService::MesholaMsgService() {
     MeshCoreProtocol::registerSelf();
     MyProtocol::registerSelf();  // Add this
 }

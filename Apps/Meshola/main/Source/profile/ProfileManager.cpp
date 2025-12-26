@@ -13,16 +13,6 @@
 
 namespace meshola {
 
-// Singleton instance
-static ProfileManager* s_instance = nullptr;
-
-ProfileManager& ProfileManager::getInstance() {
-    if (!s_instance) {
-        s_instance = new ProfileManager();
-    }
-    return *s_instance;
-}
-
 ProfileManager::ProfileManager()
     : _profileCount(0)
     , _activeProfileIndex(-1)
@@ -213,6 +203,11 @@ bool ProfileManager::switchToProfile(const char* id) {
     }
     
     return true;
+}
+
+bool ProfileManager::setActiveProfile(const char* id) {
+    // Alias for switchToProfile
+    return switchToProfile(id);
 }
 
 bool ProfileManager::saveActiveProfile() {

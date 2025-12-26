@@ -6,29 +6,49 @@
 
 ## Current Sprint
 
-**Focus:** CRITICAL ARCHITECTURAL REVISION - Tactility Service Model
+**Focus:** Testing & Integration
 
 ### In Progress 🚧
 
 | Task | Priority | Status | Notes |
 |------|----------|--------|-------|
-| Architecture revision | CRITICAL | In Progress | Convert MeshService to Tactility Service |
+| Integration testing | High | Ready | Build and test on hardware |
 
 ### Up Next 📋
 
 | Task | Priority | Estimate | Notes |
 |------|----------|----------|-------|
-| **Create MeshService as Tactility Service** | CRITICAL | 4-6 hrs | Must run in background |
-| Implement PubSub event system | CRITICAL | 2-3 hrs | Message, Contact, Status events |
-| Refactor MesholaApp to use Service | High | 3-4 hrs | Subscribe to PubSub |
 | ChannelsView implementation | High | 2-3 hrs | Core UI for channel selection |
 | Profile Editor UI | Medium | 3-4 hrs | Full editing screen |
+| MeshCore protocol integration | High | 4-6 hrs | Actual RadioLib integration |
 
 ### Blocked ⛔
 
-| Task | Blocked By | Notes |
-|------|------------|-------|
-| All new UI features | Architecture revision | Must complete service model first |
+*None*
+
+---
+
+## Completed ✅
+
+### December 26, 2024
+
+- [x] **CRITICAL DISCOVERY: Tactility Service Model** - Services run in background!
+- [x] Analyzed Tactility source code for Service/App architecture
+- [x] Studied GpsService as reference implementation
+- [x] Identified PubSub pattern for event broadcasting
+- [x] Updated architecture documentation with new model
+- [x] **COMPLETED: MesholaMsgService rewritten as Tactility Service**
+- [x] Implemented PubSub event types (MessageEvent, ContactEvent, AckEvent, StatusEvent)
+- [x] Moved ProfileManager, MessageStore, IProtocol ownership into MesholaMsgService
+- [x] Removed singleton patterns from ProfileManager and MessageStore
+- [x] Refactored MesholaApp to subscribe to MesholaMsgService PubSub
+- [x] Created TACTILITY_REFERENCE.md documentation
+- [x] **RENAMED: MeshService → MesholaMsgService** (namespace safety)
+- [x] Updated service ID to "MesholaMsg"
+- [x] **DOCUMENTED: Meshola Maps integration architecture**
+- [x] Created INTEGRATION.md with full ecosystem contracts
+- [x] Reserved shared data paths and formats
+- [x] Defined inter-app communication pattern (Maps → Messenger → MesholaMsgService)
 
 ---
 
@@ -41,7 +61,7 @@
 - [x] ProtocolRegistry implementation
 - [x] MeshCoreProtocol stub
 - [x] Profile struct and ProfileManager
-- [x] MeshService singleton
+- [x] MesholaMsgService singleton
 - [x] MesholaApp with navigation
 - [x] ChatView with full UI
 - [x] MessageStore with JSON Lines
@@ -61,6 +81,12 @@
 - [x] Studied GpsService as reference implementation
 - [x] Identified PubSub pattern for event broadcasting
 - [x] Updated architecture documentation with new model
+- [x] **COMPLETED: MesholaMsgService rewritten as Tactility Service**
+- [x] Implemented PubSub event types (MessageEvent, ContactEvent, AckEvent, StatusEvent)
+- [x] Moved ProfileManager, MessageStore, IProtocol ownership into MesholaMsgService
+- [x] Removed singleton patterns from ProfileManager and MessageStore
+- [x] Refactored MesholaApp to subscribe to MesholaMsgService PubSub
+- [x] Created TACTILITY_REFERENCE.md documentation
 
 ---
 

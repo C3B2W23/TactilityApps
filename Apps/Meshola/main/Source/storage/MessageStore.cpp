@@ -14,16 +14,6 @@ namespace meshola {
 
 static const char* STORAGE_BASE = "/data/meshola/messenger";
 
-// Singleton instance
-static MessageStore* s_instance = nullptr;
-
-MessageStore& MessageStore::getInstance() {
-    if (!s_instance) {
-        s_instance = new MessageStore();
-    }
-    return *s_instance;
-}
-
 MessageStore::MessageStore()
     : _hasProfile(false)
 {
@@ -424,6 +414,24 @@ bool MessageStore::ensureDirectory(const char* path) {
     // Stub for non-ESP builds
     return true;
 #endif
+}
+
+// ============================================================================
+// Convenience Methods (return vectors)
+// ============================================================================
+
+std::vector<Message> MessageStore::getContactMessages(const uint8_t publicKey[PUBLIC_KEY_SIZE],
+                                                       int maxMessages) {
+    std::vector<Message> messages;
+    loadContactMessages(publicKey, maxMessages, messages);
+    return messages;
+}
+
+std::vector<Message> MessageStore::getChannelMessages(const uint8_t channelId[CHANNEL_ID_SIZE],
+                                                       int maxMessages) {
+    std::vector<Message> messages;
+    loadChannelMessages(channelId, maxMessages, messages);
+    return messages;
 }
 
 } // namespace meshola

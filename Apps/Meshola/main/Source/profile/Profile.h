@@ -119,19 +119,19 @@ struct Profile {
  * - Loading/saving profiles to storage
  * - Switching active profile
  * - Generating unique profile IDs
+ * 
+ * Note: This class is owned by MesholaMsgService, not a singleton.
  */
 class ProfileManager {
 public:
     using ProfileSwitchCallback = std::function<void(const Profile& newProfile)>;
     
-    /**
-     * Get singleton instance.
-     */
-    static ProfileManager& getInstance();
+    ProfileManager();
+    ~ProfileManager();
     
     /**
      * Initialize - load profiles from storage.
-     * Call this at app startup.
+     * Call this at startup.
      */
     bool init();
     
@@ -179,7 +179,14 @@ public:
     bool deleteProfile(const char* id);
     
     /**
-     * Switch to a different profile.
+     * Set the active profile by ID.
+     * Saves current profile first, then switches.
+     * @return true if profile was found and activated
+     */
+    bool setActiveProfile(const char* id);
+    
+    /**
+     * Switch to a different profile (alias for setActiveProfile).
      * This will:
      * - Save current profile data
      * - Load new profile
@@ -221,9 +228,6 @@ public:
     void getProfileDataPath(const char* profileId, char* dest, size_t maxLen);
 
 private:
-    ProfileManager();
-    ~ProfileManager();
-    
     // Non-copyable
     ProfileManager(const ProfileManager&) = delete;
     ProfileManager& operator=(const ProfileManager&) = delete;
