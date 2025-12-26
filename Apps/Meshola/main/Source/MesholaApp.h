@@ -2,6 +2,8 @@
 
 #include <TactilityCpp/App.h>
 #include "protocol/IProtocol.h"
+#include "profile/Profile.h"
+#include "views/ChatView.h"
 
 namespace meshola {
 
@@ -52,11 +54,16 @@ private:
     void onContactUpdated(const Contact& contact, bool isNew);
     void onAckReceived(uint32_t ackId, bool success);
     
+    // Profile switch handler
+    void onProfileSwitch(const Profile& newProfile);
+    
     // Placeholder view creators (temporary until full views)
-    void createChatViewPlaceholder();
     void createContactsViewPlaceholder();
     void createChannelsViewPlaceholder();
     void createSettingsViewPlaceholder();
+    
+    // Send message handler
+    static void onSendMessage(const char* text, void* userData);
     
     // UI state
     AppHandle _handle;
@@ -71,6 +78,9 @@ private:
     lv_obj_t* _btnSettings;
     
     ViewType _currentView;
+    
+    // Views
+    ChatView _chatView;
 };
 
 } // namespace meshola

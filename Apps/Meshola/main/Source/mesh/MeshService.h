@@ -1,6 +1,8 @@
 #pragma once
 
 #include "protocol/IProtocol.h"
+#include "profile/Profile.h"
+#include "storage/MessageStore.h"
 #include <memory>
 
 namespace meshola {
@@ -22,10 +24,20 @@ public:
     static MeshService& getInstance();
     
     /**
-     * Initialize the service with a protocol ID.
-     * @param protocolId Protocol to use (e.g., "meshcore", "customfork")
+     * Initialize the service with the active profile.
+     * Uses ProfileManager to get current profile settings.
      */
-    bool init(const char* protocolId);
+    bool init();
+    
+    /**
+     * Initialize the service with a specific profile.
+     */
+    bool initWithProfile(const Profile& profile);
+    
+    /**
+     * Reinitialize with new profile (called on profile switch).
+     */
+    bool reinitWithProfile(const Profile& profile);
     
     /**
      * Start the mesh service (begins background thread).

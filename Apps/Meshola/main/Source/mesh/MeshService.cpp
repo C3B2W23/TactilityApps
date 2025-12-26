@@ -1,5 +1,7 @@
 #include "MeshService.h"
 #include "protocol/MeshCoreProtocol.h"
+#include "profile/Profile.h"
+#include "storage/MessageStore.h"
 #include <cstring>
 
 // TODO: Include actual Tactility headers when integrated
@@ -46,7 +48,20 @@ MeshService::~MeshService() {
     }
 }
 
-bool MeshService::init(const char* protocolId) {
+bool MeshService::init() {
+    // Use ProfileManager to get active profile
+    auto& profileMgr = ProfileManager::getInstance();
+    profileMgr.init();
+    
+    const Profile* profile = profileMgr.getActiveProfile();
+    if (!profile) {
+        return false;
+    }
+    
+    return initWithProfile(*profile);
+}
+
+bool MeshService::initWithProfile(const Profile& profile) {
     if (_running) {
         return false;  // Must stop first
     }
@@ -58,25 +73,33 @@ bool MeshService::init(const char* protocolId) {
     }
     
     // Create new protocol instance
-    _protocol = ProtocolRegistry::createProtocol(protocolId);
+    _protocol = ProtocolRegistry::createProtocol(profile.protocolId);
     if (!_protocol) {
         return false;
     }
     
-    _protocolId = protocolId;
+    _protocolId = profile.protocolId;
     
-    // Initialize with default config
-    // TODO: Load saved config from preferences
-    RadioConfig defaultConfig = {
-        .frequency = 906.875f,
-        .bandwidth = 250.0f,
-        .spreadingFactor = 11,
-        .codingRate = 5,
-        .txPower = 22
-    };
+    // Set node name from profile
+    _protocol->setNodeName(profile.nodeName);
+    
+    // Configure MessageStore for this profile
+    MessageStore::getInstance().setActiveProfile(profile.id);
+    
+    // Apply protocol-specific settings from profile
+    for (int i = 0; i < profile.protocolSettingCount; i++) {
+        // TODO: Protocol needs API to accept these
+        // _protocol->setSetting(profile.protocolSettings[i].key, 
+        //                       profile.protocolSettings[i].value);
+    }
     
     // Wire up callbacks to forward to our registered callbacks
+    // AND persist messages
     _protocol->setMessageCallback([this](const Message& msg) {
+        // Persist incoming message immediately
+        MessageStore::getInstance().appendMessage(msg);
+        
+        // Forward to UI callback
         if (_messageCallback) {
             _messageCallback(msg);
         }
@@ -100,7 +123,26 @@ bool MeshService::init(const char* protocolId) {
         }
     });
     
-    return _protocol->init(defaultConfig);
+    // Initialize with profile's radio config
+    return _protocol->init(profile.radio);
+}
+
+bool MeshService::reinitWithProfile(const Profile& profile) {
+    bool wasRunning = _running;
+    
+    if (wasRunning) {
+        stop();
+    }
+    
+    if (!initWithProfile(profile)) {
+        return false;
+    }
+    
+    if (wasRunning) {
+        return start();
+    }
+    
+    return true;
 }
 
 bool MeshService::start() {

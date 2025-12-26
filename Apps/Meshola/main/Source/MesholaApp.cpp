@@ -1,11 +1,15 @@
 #include "MesholaApp.h"
 #include "mesh/MeshService.h"
+#include "profile/Profile.h"
+#include "storage/MessageStore.h"
+#include "views/ChatView.h"
 
 #include <tt_lvgl_toolbar.h>
 #include <tt_lvgl.h>
 #include <lvgl.h>
 #include <cstring>
 #include <cstdio>
+#include <ctime>
 
 namespace meshola {
 
@@ -59,10 +63,19 @@ void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
     // Create bottom navigation bar
     createNavBar(parent);
     
+    // Initialize profile manager
+    auto& profileMgr = ProfileManager::getInstance();
+    profileMgr.init();
+    
+    // Set up profile switch callback
+    profileMgr.setProfileSwitchCallback([this](const Profile& newProfile) {
+        onProfileSwitch(newProfile);
+    });
+    
     // Initialize mesh service if not already running
     auto& meshService = MeshService::getInstance();
     if (!meshService.isRunning()) {
-        if (meshService.init("meshcore")) {
+        if (meshService.init()) {
             // Set up callbacks
             meshService.setMessageCallback([this](const Message& msg) {
                 onMessageReceived(msg);
@@ -83,6 +96,9 @@ void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
 }
 
 void MesholaApp::onHide(AppHandle handle) {
+    // Clean up views
+    _chatView.destroy();
+    
     // Note: We don't stop the mesh service here - it continues running
     // in the background so we can receive messages even when app is hidden
     
@@ -166,7 +182,12 @@ void MesholaApp::showView(ViewType view) {
         return;
     }
     
-    // Clear current content
+    // Clean up previous view
+    if (_currentView == ViewType::Chat) {
+        _chatView.destroy();
+    }
+    
+    // Clear content container
     lv_obj_clean(_contentContainer);
     
     _currentView = view;
@@ -175,7 +196,8 @@ void MesholaApp::showView(ViewType view) {
     // Create view content
     switch (view) {
         case ViewType::Chat:
-            createChatViewPlaceholder();
+            _chatView.create(_contentContainer);
+            _chatView.setSendCallback(onSendMessage, this);
             break;
         case ViewType::Contacts:
             createContactsViewPlaceholder();
@@ -190,58 +212,64 @@ void MesholaApp::showView(ViewType view) {
 }
 
 // ============================================================================
-// Placeholder Views (to be replaced with full view classes)
+// Send message handler
 // ============================================================================
 
-void MesholaApp::createChatViewPlaceholder() {
-    auto* container = lv_obj_create(_contentContainer);
-    lv_obj_set_size(container, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(container, 0, LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(container, 0, LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, LV_STATE_DEFAULT);
+void MesholaApp::onSendMessage(const char* text, void* userData) {
+    auto* app = static_cast<MesholaApp*>(userData);
+    if (!app) return;
     
-    // Message list area
-    auto* msgList = lv_obj_create(container);
-    lv_obj_set_width(msgList, LV_PCT(100));
-    lv_obj_set_flex_grow(msgList, 1);
-    lv_obj_set_style_bg_color(msgList, lv_color_hex(COLOR_BG_DARK), LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(msgList, 0, LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(msgList, 0, LV_STATE_DEFAULT);
+    auto& meshService = MeshService::getInstance();
+    auto& msgStore = MessageStore::getInstance();
     
-    auto* placeholder = lv_label_create(msgList);
-    lv_label_set_text(placeholder, 
-        "Welcome to Meshola!\n\n"
-        LV_SYMBOL_WIFI " No messages yet\n\n"
-        "Select a peer or channel to start chatting");
-    lv_obj_set_style_text_align(placeholder, LV_TEXT_ALIGN_CENTER, LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(placeholder, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
-    lv_obj_center(placeholder);
+    const Contact* contact = app->_chatView.getActiveContact();
+    const Channel* channel = app->_chatView.getActiveChannel();
     
-    // Input area
-    auto* inputRow = lv_obj_create(container);
-    lv_obj_set_size(inputRow, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(inputRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(inputRow, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(inputRow, 4, LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_column(inputRow, 4, LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(inputRow, 0, LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(inputRow, lv_color_hex(COLOR_BG_CARD), LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(inputRow, 0, LV_STATE_DEFAULT);
-    
-    auto* input = lv_textarea_create(inputRow);
-    lv_obj_set_flex_grow(input, 1);
-    lv_obj_set_height(input, 36);
-    lv_textarea_set_placeholder_text(input, "Type a message...");
-    lv_textarea_set_one_line(input, true);
-    
-    auto* sendBtn = lv_btn_create(inputRow);
-    lv_obj_set_size(sendBtn, 44, 36);
-    lv_obj_set_style_bg_color(sendBtn, lv_color_hex(COLOR_ACCENT), LV_STATE_DEFAULT);
-    auto* sendLbl = lv_label_create(sendBtn);
-    lv_label_set_text(sendLbl, LV_SYMBOL_OK);
-    lv_obj_center(sendLbl);
+    if (contact) {
+        // Send direct message
+        uint32_t ackId = 0;
+        if (meshService.sendMessage(*contact, text, ackId)) {
+            // Create outgoing message for display and storage
+            Message outMsg = {};
+            memcpy(outMsg.senderKey, contact->publicKey, PUBLIC_KEY_SIZE);  // Store recipient key
+            strncpy(outMsg.text, text, MAX_MESSAGE_LEN - 1);
+            outMsg.isOutgoing = true;
+            outMsg.isChannel = false;
+            outMsg.status = MessageStatus::Pending;
+            outMsg.ackId = ackId;
+            outMsg.timestamp = (uint32_t)time(nullptr);
+            
+            // Persist immediately
+            msgStore.appendMessage(outMsg);
+            
+            // Add to UI
+            app->_chatView.addMessage(outMsg);
+        }
+    } else if (channel) {
+        // Send channel message
+        if (meshService.sendChannelMessage(*channel, text)) {
+            // Create outgoing message for display and storage
+            Message outMsg = {};
+            memcpy(outMsg.channelId, channel->id, CHANNEL_ID_SIZE);
+            strncpy(outMsg.text, text, MAX_MESSAGE_LEN - 1);
+            strncpy(outMsg.senderName, meshService.getNodeName(), MAX_NODE_NAME_LEN - 1);
+            outMsg.isOutgoing = true;
+            outMsg.isChannel = true;
+            outMsg.status = MessageStatus::Sent;
+            outMsg.timestamp = (uint32_t)time(nullptr);
+            
+            // Persist immediately
+            msgStore.appendMessage(outMsg);
+            
+            // Add to UI
+            app->_chatView.addMessage(outMsg);
+        }
+    }
 }
+
+// ============================================================================
+// Placeholder Views (to be replaced with full view classes)
+// ============================================================================
 
 void MesholaApp::createContactsViewPlaceholder() {
     auto* container = lv_obj_create(_contentContainer);
@@ -367,36 +395,97 @@ void MesholaApp::createSettingsViewPlaceholder() {
     lv_obj_set_style_bg_color(container, lv_color_hex(COLOR_BG_DARK), LV_STATE_DEFAULT);
     lv_obj_set_scrollbar_mode(container, LV_SCROLLBAR_MODE_AUTO);
     
+    auto& profileMgr = ProfileManager::getInstance();
     auto& meshService = MeshService::getInstance();
-    auto* protocol = meshService.getProtocol();
+    const Profile* activeProfile = profileMgr.getActiveProfile();
     
-    // === Protocol Section ===
-    auto* protoSection = lv_label_create(container);
-    lv_label_set_text(protoSection, "Protocol");
-    lv_obj_set_style_text_font(protoSection, &lv_font_montserrat_14, LV_STATE_DEFAULT);
+    // === Profile Section ===
+    auto* profileSection = lv_label_create(container);
+    lv_label_set_text(profileSection, "Active Profile");
+    lv_obj_set_style_text_font(profileSection, &lv_font_montserrat_14, LV_STATE_DEFAULT);
     
-    auto* protoCard = lv_obj_create(container);
-    lv_obj_set_width(protoCard, LV_PCT(100));
-    lv_obj_set_height(protoCard, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(protoCard, lv_color_hex(COLOR_BG_CARD), LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_all(protoCard, 8, LV_STATE_DEFAULT);
-    lv_obj_set_flex_flow(protoCard, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(protoCard, 4, LV_STATE_DEFAULT);
+    auto* profileCard = lv_obj_create(container);
+    lv_obj_set_width(profileCard, LV_PCT(100));
+    lv_obj_set_height(profileCard, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(profileCard, lv_color_hex(COLOR_BG_CARD), LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(profileCard, 8, LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(profileCard, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(profileCard, 4, LV_STATE_DEFAULT);
     
-    if (protocol) {
-        auto info = protocol->getInfo();
+    if (activeProfile) {
+        // Profile dropdown
+        auto* profileRow = lv_obj_create(profileCard);
+        lv_obj_set_width(profileRow, LV_PCT(100));
+        lv_obj_set_height(profileRow, LV_SIZE_CONTENT);
+        lv_obj_set_flex_flow(profileRow, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(profileRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_bg_opa(profileRow, LV_OPA_TRANSP, LV_STATE_DEFAULT);
+        lv_obj_set_style_border_width(profileRow, 0, LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_all(profileRow, 0, LV_STATE_DEFAULT);
         
-        char nameBuf[64];
-        snprintf(nameBuf, sizeof(nameBuf), "%s v%s", info.name, info.version);
-        auto* nameLabel = lv_label_create(protoCard);
-        lv_label_set_text(nameLabel, nameBuf);
+        auto* profileLabel = lv_label_create(profileRow);
+        lv_label_set_text(profileLabel, "Profile:");
         
-        auto* descLabel = lv_label_create(protoCard);
-        lv_label_set_text(descLabel, info.description);
-        lv_obj_set_style_text_color(descLabel, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
-        lv_label_set_long_mode(descLabel, LV_LABEL_LONG_WRAP);
-        lv_obj_set_width(descLabel, LV_PCT(100));
+        auto* profileDropdown = lv_dropdown_create(profileRow);
+        lv_obj_set_width(profileDropdown, 140);
+        
+        // Build dropdown options from profiles
+        char dropdownOpts[256] = "";
+        int selectedIdx = 0;
+        for (int i = 0; i < profileMgr.getProfileCount(); i++) {
+            const Profile* p = profileMgr.getProfile(i);
+            if (p) {
+                if (i > 0) strcat(dropdownOpts, "\n");
+                strcat(dropdownOpts, p->name);
+                if (strcmp(p->id, activeProfile->id) == 0) {
+                    selectedIdx = i;
+                }
+            }
+        }
+        lv_dropdown_set_options(profileDropdown, dropdownOpts);
+        lv_dropdown_set_selected(profileDropdown, selectedIdx);
+        
+        // Profile switch handler
+        lv_obj_add_event_cb(profileDropdown, [](lv_event_t* e) {
+            auto* dropdown = lv_event_get_target(e);
+            int sel = lv_dropdown_get_selected(dropdown);
+            auto& pm = ProfileManager::getInstance();
+            const Profile* p = pm.getProfile(sel);
+            if (p) {
+                pm.switchToProfile(p->id);
+            }
+        }, LV_EVENT_VALUE_CHANGED, nullptr);
+        
+        // Protocol info
+        char protoBuf[64];
+        snprintf(protoBuf, sizeof(protoBuf), "Protocol: %s", activeProfile->protocolId);
+        auto* protoLabel = lv_label_create(profileCard);
+        lv_label_set_text(protoLabel, protoBuf);
+        lv_obj_set_style_text_color(protoLabel, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
     }
+    
+    // New/Edit profile buttons
+    auto* profileBtnRow = lv_obj_create(profileCard);
+    lv_obj_set_width(profileBtnRow, LV_PCT(100));
+    lv_obj_set_height(profileBtnRow, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(profileBtnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(profileBtnRow, 8, LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(profileBtnRow, LV_OPA_TRANSP, LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(profileBtnRow, 0, LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(profileBtnRow, 0, LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(profileBtnRow, 8, LV_STATE_DEFAULT);
+    
+    auto* newProfileBtn = lv_btn_create(profileBtnRow);
+    lv_obj_set_style_bg_color(newProfileBtn, lv_color_hex(COLOR_ACCENT), LV_STATE_DEFAULT);
+    auto* newProfileLbl = lv_label_create(newProfileBtn);
+    lv_label_set_text(newProfileLbl, LV_SYMBOL_PLUS " New");
+    // TODO: Wire up new profile creation
+    
+    auto* editProfileBtn = lv_btn_create(profileBtnRow);
+    lv_obj_set_style_bg_color(editProfileBtn, lv_color_hex(COLOR_ACCENT_DIM), LV_STATE_DEFAULT);
+    auto* editProfileLbl = lv_label_create(editProfileBtn);
+    lv_label_set_text(editProfileLbl, LV_SYMBOL_EDIT " Edit");
+    // TODO: Wire up profile editing
     
     // === Radio Section ===
     auto* radioSection = lv_label_create(container);
@@ -411,20 +500,21 @@ void MesholaApp::createSettingsViewPlaceholder() {
     lv_obj_set_flex_flow(radioCard, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(radioCard, 4, LV_STATE_DEFAULT);
     
-    if (protocol) {
-        auto config = meshService.getRadioConfig();
+    if (activeProfile) {
         char buf[64];
         
-        snprintf(buf, sizeof(buf), "Frequency: %.3f MHz", config.frequency);
+        snprintf(buf, sizeof(buf), "Frequency: %.3f MHz", activeProfile->radio.frequency);
         auto* freqLabel = lv_label_create(radioCard);
         lv_label_set_text(freqLabel, buf);
         
-        snprintf(buf, sizeof(buf), "Bandwidth: %.1f kHz", config.bandwidth);
+        snprintf(buf, sizeof(buf), "Bandwidth: %.1f kHz", activeProfile->radio.bandwidth);
         auto* bwLabel = lv_label_create(radioCard);
         lv_label_set_text(bwLabel, buf);
         
         snprintf(buf, sizeof(buf), "SF: %d  CR: 4/%d  TX: %d dBm", 
-            config.spreadingFactor, config.codingRate, config.txPower);
+            activeProfile->radio.spreadingFactor, 
+            activeProfile->radio.codingRate, 
+            activeProfile->radio.txPower);
         auto* paramLabel = lv_label_create(radioCard);
         lv_label_set_text(paramLabel, buf);
     }
@@ -442,10 +532,21 @@ void MesholaApp::createSettingsViewPlaceholder() {
     lv_obj_set_flex_flow(nodeCard, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(nodeCard, 4, LV_STATE_DEFAULT);
     
-    char nameBuf[64];
-    snprintf(nameBuf, sizeof(nameBuf), "Name: %s", meshService.getNodeName());
-    auto* nodeNameLabel = lv_label_create(nodeCard);
-    lv_label_set_text(nodeNameLabel, nameBuf);
+    if (activeProfile) {
+        char nameBuf[64];
+        snprintf(nameBuf, sizeof(nameBuf), "Name: %s", activeProfile->nodeName);
+        auto* nodeNameLabel = lv_label_create(nodeCard);
+        lv_label_set_text(nodeNameLabel, nameBuf);
+        
+        // Public key (first 8 bytes as hex)
+        char keyBuf[64];
+        snprintf(keyBuf, sizeof(keyBuf), "Key: %02x%02x%02x%02x...",
+            activeProfile->publicKey[0], activeProfile->publicKey[1],
+            activeProfile->publicKey[2], activeProfile->publicKey[3]);
+        auto* keyLabel = lv_label_create(nodeCard);
+        lv_label_set_text(keyLabel, keyBuf);
+        lv_obj_set_style_text_color(keyLabel, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
+    }
     
     auto status = meshService.getStatus();
     char statusBuf[64];
@@ -487,16 +588,73 @@ void MesholaApp::onNavSettingsPressed(lv_event_t* event) {
 // ============================================================================
 
 void MesholaApp::onMessageReceived(const Message& msg) {
-    // TODO: Update UI on LVGL thread
-    // Need to use tt_lvgl_lock() and queue UI update
+    // Check if this message belongs to the current conversation
+    if (_currentView == ViewType::Chat) {
+        const Contact* activeContact = _chatView.getActiveContact();
+        const Channel* activeChannel = _chatView.getActiveChannel();
+        
+        if (msg.isChannel && activeChannel) {
+            // Check if message is for active channel
+            if (memcmp(msg.channelId, activeChannel->id, CHANNEL_ID_SIZE) == 0) {
+                // TODO: Use LVGL lock for thread safety
+                // tt_lvgl_lock(TT_MAX_TICKS);
+                _chatView.addMessage(msg);
+                // tt_lvgl_unlock();
+            }
+        } else if (!msg.isChannel && activeContact) {
+            // Check if message is from active contact
+            if (memcmp(msg.senderKey, activeContact->publicKey, PUBLIC_KEY_SIZE) == 0) {
+                // TODO: Use LVGL lock for thread safety
+                _chatView.addMessage(msg);
+            }
+        }
+    }
+    // TODO: Store message for later viewing even if not in active conversation
 }
 
 void MesholaApp::onContactUpdated(const Contact& contact, bool isNew) {
-    // TODO: Refresh contacts view if visible
+    // Refresh contacts view if visible
+    if (_currentView == ViewType::Contacts) {
+        showView(ViewType::Contacts);  // Refresh
+    }
+    
+    // Update chat header if this is the active contact
+    if (_currentView == ViewType::Chat) {
+        const Contact* activeContact = _chatView.getActiveContact();
+        if (activeContact && memcmp(contact.publicKey, activeContact->publicKey, PUBLIC_KEY_SIZE) == 0) {
+            _chatView.setActiveContact(&contact);  // Update with new info
+        }
+    }
 }
 
 void MesholaApp::onAckReceived(uint32_t ackId, bool success) {
-    // TODO: Update message status in chat view
+    if (_currentView == ViewType::Chat) {
+        _chatView.updateMessageStatus(ackId, 
+            success ? MessageStatus::Delivered : MessageStatus::Failed);
+    }
+}
+
+void MesholaApp::onProfileSwitch(const Profile& newProfile) {
+    // Reinitialize mesh service with new profile
+    auto& meshService = MeshService::getInstance();
+    meshService.reinitWithProfile(newProfile);
+    
+    // Clear chat view - new profile means new conversation context
+    _chatView.clearActiveConversation();
+    
+    // If we're on chat view, refresh to show welcome screen
+    if (_currentView == ViewType::Chat) {
+        showView(ViewType::Chat);
+    }
+    
+    // Refresh other views if visible
+    if (_currentView == ViewType::Contacts) {
+        showView(ViewType::Contacts);
+    } else if (_currentView == ViewType::Channels) {
+        showView(ViewType::Channels);
+    } else if (_currentView == ViewType::Settings) {
+        showView(ViewType::Settings);
+    }
 }
 
 } // namespace meshola

@@ -8,6 +8,8 @@ idf_component_register(
     INCLUDE_DIRS 
         Source
         Source/protocol
+        Source/profile
+        Source/storage
         Source/views
         Source/mesh
     REQUIRES 
