@@ -9,8 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- ContactsView - peer selection UI
+### CRITICAL: Architectural Revision Required
+**Discovery Date:** December 25, 2024
+
+**Problem Identified:** Original architecture had MeshService as part of the app. This means:
+- Radio stops when user switches to another app
+- No background message reception
+- App is useless as a messenger
+
+**Solution Found:** Tactility has a Service system separate from Apps:
+- Services run continuously in background
+- Services persist across app switches
+- Apps subscribe to Service events via PubSub
+- GpsService provides reference implementation
+
+**Impact:**
+- MeshService must be rewritten as a Tactility Service
+- App becomes thin UI layer that subscribes to Service
+- Enables background message reception
+- Enables Meshola Maps to share the same MeshService
+
+### Added
+- **ContactsView** - Full peer list view with:
+  - List of discovered peers with name, signal strength, status
+  - Online/offline indicator dots
+  - Last seen timestamps
+  - Hop count display
+  - Tap to open chat with peer
+  - Broadcast advertisement button
+  - Refresh button
+  - Empty state when no peers discovered
+- **Tactility Service Research:**
+  - Analyzed Service.h, ServiceManifest.h, ServiceRegistration.h
+  - Studied GpsService.h/cpp as reference implementation
+  - Documented PubSub event pattern
+  - Updated architecture documentation
+
+### Changed
+- Rebranded to "Meshola Messenger"
+- App ID changed to `com.meshola.messenger`
+- Storage path changed to `/data/meshola/messenger/` for future app compatibility
+
+### Planned (Revised)
+- **Rewrite MeshService as Tactility Service** (CRITICAL)
+- Implement PubSub events (MessageEvent, ContactEvent, StatusEvent)
+- Refactor MesholaApp to be thin UI layer
 - ChannelsView - channel management UI
 - Profile editor UI
 - MeshCore protocol integration (RadioLib + actual mesh operations)

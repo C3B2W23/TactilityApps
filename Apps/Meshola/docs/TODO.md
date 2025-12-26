@@ -6,22 +6,29 @@
 
 ## Current Sprint
 
-**Focus:** Complete v0.2.0 - Views & Interaction
+**Focus:** CRITICAL ARCHITECTURAL REVISION - Tactility Service Model
 
 ### In Progress 🚧
 
-*No tasks currently in progress*
+| Task | Priority | Status | Notes |
+|------|----------|--------|-------|
+| Architecture revision | CRITICAL | In Progress | Convert MeshService to Tactility Service |
 
 ### Up Next 📋
 
 | Task | Priority | Estimate | Notes |
 |------|----------|----------|-------|
-| ContactsView implementation | High | 2-3 hrs | Core UI for peer selection |
+| **Create MeshService as Tactility Service** | CRITICAL | 4-6 hrs | Must run in background |
+| Implement PubSub event system | CRITICAL | 2-3 hrs | Message, Contact, Status events |
+| Refactor MesholaApp to use Service | High | 3-4 hrs | Subscribe to PubSub |
 | ChannelsView implementation | High | 2-3 hrs | Core UI for channel selection |
-| Profile Editor UI | High | 3-4 hrs | Full editing screen |
-| Contact persistence | Medium | 1-2 hrs | JSON storage |
-| Channel persistence | Medium | 1-2 hrs | JSON storage |
-| JSON read implementation | Medium | 2-3 hrs | Currently write-only |
+| Profile Editor UI | Medium | 3-4 hrs | Full editing screen |
+
+### Blocked ⛔
+
+| Task | Blocked By | Notes |
+|------|------------|-------|
+| All new UI features | Architecture revision | Must complete service model first |
 
 ---
 
@@ -45,6 +52,15 @@
 - [x] Settings view placeholder
 - [x] Documentation suite created
 - [x] Fixed folder structure issue ({main garbage)
+- [x] Removed localized references (sanitized for public repo)
+- [x] Rebranded to Meshola Messenger
+- [x] Namespaced storage for future Meshola apps
+- [x] **ContactsView implementation** - peer list with selection, broadcast, refresh
+- [x] **CRITICAL DISCOVERY: Tactility Service Model** - Services run in background!
+- [x] Analyzed Tactility source code for Service/App architecture
+- [x] Studied GpsService as reference implementation
+- [x] Identified PubSub pattern for event broadcasting
+- [x] Updated architecture documentation with new model
 
 ---
 

@@ -9,7 +9,8 @@
 | Version | Target | Status | Focus |
 |---------|--------|--------|-------|
 | 0.1.0 | Dec 2024 | ✅ Complete | Core scaffold, profiles, chat UI, persistence |
-| 0.2.0 | Jan 2025 | 🚧 In Progress | ContactsView, ChannelsView, Profile Editor |
+| 0.1.5 | Dec 2024 | 🚨 CRITICAL | **Architectural revision - Tactility Service model** |
+| 0.2.0 | Jan 2025 | 📋 Planned | ContactsView, ChannelsView, Profile Editor |
 | 0.3.0 | Feb 2025 | 📋 Planned | MeshCore integration, actual radio ops |
 | 0.4.0 | Mar 2025 | 📋 Planned | Polish, testing, beta release |
 | 1.0.0 | Q2 2025 | 📋 Planned | Stable release |
@@ -17,6 +18,36 @@
 ---
 
 ## Milestone Details
+
+### v0.1.5 - Architectural Revision 🚨 CRITICAL
+
+**Status:** In Progress (December 25, 2024)
+
+**Why This Is Critical:**
+The original architecture had MeshService as part of the app. This means the radio stops when the user switches to any other app (Settings, Launcher, Maps, etc.). This makes the messenger completely non-functional as a background service.
+
+**Discovery:** Tactility OS has a **Service** system that runs independently of apps:
+- Services persist across app switches
+- Services run in background continuously  
+- GpsService provides reference implementation
+- Apps subscribe to Service events via PubSub
+
+**Tasks:**
+- [ ] Create MeshService as a Tactility Service (not app component)
+- [ ] Implement PubSub event types (MessageEvent, ContactEvent, StatusEvent)
+- [ ] Move ProfileManager, MessageStore, IProtocol into MeshService
+- [ ] Implement background thread for radio loop
+- [ ] Refactor MesholaApp to be thin UI layer
+- [ ] App subscribes to MeshService PubSub on show
+- [ ] App unsubscribes on hide
+- [ ] Test message reception while in other apps
+
+**Deliverables:**
+- MeshService runs independently of app lifecycle
+- Messages received while user is in other apps
+- Foundation ready for Meshola Maps integration
+
+---
 
 ### v0.1.0 - Foundation ✅
 
@@ -29,21 +60,21 @@
 - [x] MeshCoreProtocol stub
 - [x] Profile system (create, switch, delete)
 - [x] Per-profile identity (keypairs, node name)
-- [x] MeshService background service
+- [x] MeshService singleton (⚠️ needs revision to Tactility Service)
 - [x] ChatView with message bubbles
 - [x] Message persistence (JSON Lines)
 - [x] Bottom navigation UI
 - [x] Settings view (placeholder)
 - [x] Documentation suite
+- [x] ContactsView implementation
 
 ---
 
-### v0.2.0 - Views & Interaction 🚧
+### v0.2.0 - Views & Interaction 📋
 
-**Status:** In Progress
+**Status:** Blocked by v0.1.5
 
 **Goals:**
-- [ ] ContactsView - full peer list and selection
 - [ ] ChannelsView - channel list and management
 - [ ] Profile Editor - full UI for creating/editing profiles
 - [ ] Contact persistence
@@ -51,13 +82,6 @@
 - [ ] Improved Settings view
 
 **Tasks:**
-
-#### ContactsView
-- [ ] Create ContactsView class
-- [ ] List discovered peers with name, RSSI, status
-- [ ] Tap to open chat with peer
-- [ ] Pull-to-refresh / refresh button
-- [ ] Broadcast advertisement button
 - [ ] Sort by name / last seen / signal strength
 - [ ] Search/filter contacts
 

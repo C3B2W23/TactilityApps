@@ -1,6 +1,6 @@
 # Meshola Messenger - Architecture Document
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Last Updated:** December 25, 2024
 
 ---
@@ -8,363 +8,457 @@
 ## Table of Contents
 
 1. [System Overview](#system-overview)
-2. [Layer Architecture](#layer-architecture)
-3. [Component Details](#component-details)
-4. [Data Flow](#data-flow)
-5. [Storage Architecture](#storage-architecture)
-6. [Protocol Abstraction](#protocol-abstraction)
-7. [Threading Model](#threading-model)
-8. [UI Architecture](#ui-architecture)
+2. [Tactility Service vs App Model](#tactility-service-vs-app-model)
+3. [Component Architecture](#component-architecture)
+4. [MeshService (Tactility Service)](#meshservice-tactility-service)
+5. [Meshola Messenger (Tactility App)](#meshola-messenger-tactility-app)
+6. [Data Flow](#data-flow)
+7. [Storage Architecture](#storage-architecture)
+8. [Protocol Abstraction](#protocol-abstraction)
+9. [PubSub Event System](#pubsub-event-system)
+10. [Threading Model](#threading-model)
+11. [UI Architecture](#ui-architecture)
+12. [Future: Meshola Maps Integration](#future-meshola-maps-integration)
 
 ---
 
 ## System Overview
 
+**Critical Discovery (December 25, 2024):** Tactility OS has a **Service** system that runs independently of apps. Services persist across app switches, enabling background operations like radio RX/TX.
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         MESHOLA MESSENGER APPLICATION                         │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                      UI LAYER (LVGL)                        │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐   │   │
-│  │  │ ChatView │ │ Contacts │ │ Channels │ │   Settings   │   │   │
-│  │  │          │ │   View   │ │   View   │ │     View     │   │   │
-│  │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘   │   │
-│  └───────┼────────────┼────────────┼──────────────┼───────────┘   │
-│          │            │            │              │                │
-│  ┌───────┴────────────┴────────────┴──────────────┴───────────┐   │
-│  │                      MesholaApp                             │   │
-│  │              (Main App Class / Navigation)                  │   │
-│  └─────────────────────────┬───────────────────────────────────┘   │
-│                            │                                        │
-├────────────────────────────┼────────────────────────────────────────┤
-│  ┌─────────────────────────┴───────────────────────────────────┐   │
-│  │                     SERVICE LAYER                            │   │
-│  │  ┌────────────────┐  ┌─────────────────┐  ┌──────────────┐  │   │
-│  │  │  MeshService   │  │ ProfileManager  │  │ MessageStore │  │   │
-│  │  │ (Background)   │  │  (Identity)     │  │ (Persistence)│  │   │
-│  │  └───────┬────────┘  └────────┬────────┘  └──────┬───────┘  │   │
-│  └──────────┼───────────────────┼───────────────────┼──────────┘   │
-│             │                   │                   │               │
-├─────────────┼───────────────────┼───────────────────┼───────────────┤
-│  ┌──────────┴───────────────────┴───────────────────┴──────────┐   │
-│  │                   PROTOCOL LAYER                             │   │
-│  │  ┌──────────────────────────────────────────────────────┐   │   │
-│  │  │              IProtocol Interface                      │   │   │
-│  │  └──────────────────────┬───────────────────────────────┘   │   │
-│  │                         │                                    │   │
-│  │  ┌──────────┐  ┌───────┴────────┐  ┌──────────────────┐    │   │
-│  │  │ MeshCore │  │   CustomFork   │  │    Meshtastic    │    │   │
-│  │  │ Protocol │  │    Protocol    │  │    Protocol      │    │   │
-│  │  │  (impl)  │  │    (future)    │  │    (future)      │    │   │
-│  │  └────┬─────┘  └────────────────┘  └──────────────────┘    │   │
-│  └───────┼──────────────────────────────────────────────────────┘   │
-│          │                                                          │
-├──────────┼──────────────────────────────────────────────────────────┤
-│  ┌───────┴──────────────────────────────────────────────────────┐   │
-│  │                    HARDWARE LAYER                             │   │
-│  │  ┌──────────────┐  ┌─────────────┐  ┌────────────────────┐   │   │
-│  │  │   RadioLib   │  │  ESP32 HAL  │  │  Tactility SDK     │   │   │
-│  │  │   (SX1262)   │  │  (SPI/GPIO) │  │  (Display/Input)   │   │   │
-│  │  └──────────────┘  └─────────────┘  └────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           TACTILITY OS                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  SERVICES (Always Running - Persist Across App Switches)                 │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────────────┐   │
+│  │ WifiService│ │ GpsService │ │ GuiService │ │    MeshService      │   │
+│  │ (built-in) │ │ (built-in) │ │ (built-in) │ │    (NEW - Ours)     │   │
+│  │            │ │            │ │            │ │                     │   │
+│  │            │ │ Coordinates│ │            │ │ • Radio RX/TX       │   │
+│  │            │ │ PubSub     │ │            │ │ • Message Queue     │   │
+│  │            │ │            │ │            │ │ • Contact Discovery │   │
+│  │            │ │            │ │            │ │ • PubSub Events     │   │
+│  └────────────┘ └────────────┘ └────────────┘ └─────────────────────┘   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  APPS (One Foreground at a Time)                                         │
+│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐    │
+│  │ Meshola Messenger │  │   Meshola Maps    │  │   Other Apps      │    │
+│  │                   │  │                   │  │   (Launcher,      │    │
+│  │ • Chat UI         │  │ • Map Display     │  │    Settings...)   │    │
+│  │ • Contacts List   │  │ • Location Pins   │  │                   │    │
+│  │ • Channels        │  │ • Track Routes    │  │                   │    │
+│  │ • Settings        │  │                   │  │                   │    │
+│  │                   │  │                   │  │                   │    │
+│  │ Uses: MeshService │  │ Uses: MeshService │  │                   │    │
+│  │       GpsService  │  │       GpsService  │  │                   │    │
+│  └───────────────────┘  └───────────────────┘  └───────────────────┘    │
+├─────────────────────────────────────────────────────────────────────────┤
+│  HARDWARE LAYER                                                          │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────┐  ┌──────────────┐    │
+│  │   SX1262     │  │    GPS      │  │  Display   │  │   Keyboard   │    │
+│  │   (LoRa)     │  │   Module    │  │  ST7789    │  │   + Trackball│    │
+│  └──────────────┘  └─────────────┘  └────────────┘  └──────────────┘    │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Insight:** Messages are received even when user is in Maps, Settings, or Launcher because MeshService runs continuously as a Tactility Service.
 
 ---
 
-## Layer Architecture
+## Tactility Service vs App Model
 
-### UI Layer
-- **Framework:** LVGL 8.x
-- **Responsibility:** User interface rendering and input handling
-- **Components:** Views (ChatView, ContactsView, ChannelsView, SettingsView)
-- **Threading:** Runs on main LVGL thread, requires `tt_lvgl_lock()` for updates from other threads
-
-### Application Layer
-- **Component:** MesholaApp
-- **Responsibility:** App lifecycle, navigation, event routing
-- **Pattern:** Single main app class with view composition
-
-### Service Layer
-- **Components:** MeshService, ProfileManager, MessageStore
-- **Responsibility:** Business logic, persistence, background operations
-- **Pattern:** Singletons with getInstance()
-
-### Protocol Layer
-- **Interface:** IProtocol (abstract)
-- **Implementations:** MeshCoreProtocol, (future: CustomForkProtocol, MeshtasticProtocol)
-- **Pattern:** Strategy pattern with runtime switching via ProtocolRegistry
-
-### Hardware Layer
-- **Components:** RadioLib (SX1262), ESP-IDF drivers, Tactility SDK
-- **Responsibility:** Hardware abstraction
-
----
-
-## Component Details
-
-### MesholaApp (`MesholaApp.h/cpp`)
-
-Main application class implementing Tactility's `App` interface.
+### Services (Background - Always Running)
 
 ```cpp
-class MesholaApp : public App {
-    void onShow(AppHandle handle, lv_obj_t* parent);
-    void onHide(AppHandle handle);
+// Tactility Service base class
+class Service {
+    virtual bool onStart(ServiceContext& serviceContext) { return true; }
+    virtual void onStop(ServiceContext& serviceContext) {}
+};
+
+// Service manifest for registration
+struct ServiceManifest {
+    std::string id;                    // "Mesh", "Gps", etc.
+    CreateService createService;       // Factory function
+};
+
+// Registration (auto-start by default)
+void addService(const ServiceManifest& manifest, bool autoStart = true);
+
+// Finding services from anywhere
+std::shared_ptr<Service> findServiceById(const std::string& id);
+```
+
+**Services:**
+- Start when Tactility boots (if autoStart = true)
+- Run continuously in background
+- Persist across app switches
+- Provide APIs for apps to call
+- Use PubSub to broadcast events to subscribers
+
+### Apps (Foreground - One at a Time)
+
+```cpp
+// Tactility App callbacks
+struct AppManifest {
+    void (*onShow)(AppHandle handle, lv_obj_t* parent);
+    void (*onHide)(AppHandle handle);  // Called when going to background
+    void (*onResult)(AppHandle handle, Result result);
+};
+```
+
+**Apps:**
+- One foreground app at a time
+- `onShow` called when becoming visible
+- `onHide` called when another app launches (goes to background)
+- Can launch other apps and receive results
+- Subscribe to Service PubSub for real-time updates
+
+---
+
+## Component Architecture
+
+### Components Overview
+
+| Component | Type | Purpose | Persists Across App Switch? |
+|-----------|------|---------|----------------------------|
+| **MeshService** | Tactility Service | Radio, messaging, contacts | ✅ YES |
+| **ProfileManager** | Within MeshService | Identity/config management | ✅ YES |
+| **MessageStore** | Within MeshService | Message persistence | ✅ YES |
+| **IProtocol** | Within MeshService | Protocol abstraction | ✅ YES |
+| **Meshola Messenger** | Tactility App | Chat UI | ❌ No (recreated) |
+| **Meshola Maps** | Tactility App | Map UI | ❌ No (recreated) |
+
+### Dependency Graph
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    MeshService (Tactility Service)               │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    Public API                            │    │
+│  │  • sendMessage()      • getContacts()                   │    │
+│  │  • sendChannelMessage() • getChannels()                 │    │
+│  │  • getMessagePubSub() • getContactPubSub()              │    │
+│  │  • getActiveProfile() • switchProfile()                 │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│  ┌───────────────┬───────────┴───────────┬─────────────────┐    │
+│  │               │                       │                 │    │
+│  ▼               ▼                       ▼                 │    │
+│  ┌─────────┐  ┌─────────────┐  ┌──────────────┐           │    │
+│  │ Profile │  │ MessageStore│  │  IProtocol   │           │    │
+│  │ Manager │  │             │  │  Interface   │           │    │
+│  │         │  │ (JSON Lines)│  │              │           │    │
+│  └─────────┘  └─────────────┘  └──────┬───────┘           │    │
+│                                       │                    │    │
+│                          ┌────────────┼────────────┐       │    │
+│                          ▼            ▼            ▼       │    │
+│                    ┌──────────┐ ┌──────────┐ ┌──────────┐ │    │
+│                    │ MeshCore │ │CustomFork│ │Meshtastic│ │    │
+│                    │ Protocol │ │ Protocol │ │ Protocol │ │    │
+│                    └──────────┘ └──────────┘ └──────────┘ │    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ findMeshService()
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         APPS                                     │
+│  ┌─────────────────────┐    ┌─────────────────────┐             │
+│  │  Meshola Messenger  │    │    Meshola Maps     │             │
+│  │  ─────────────────  │    │  ─────────────────  │             │
+│  │  • Subscribe to     │    │  • Subscribe to     │             │
+│  │    message PubSub   │    │    contact PubSub   │             │
+│  │  • Call sendMessage │    │  • Display contact  │             │
+│  │  • Display chat UI  │    │    locations on map │             │
+│  └─────────────────────┘    └─────────────────────┘             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## MeshService (Tactility Service)
+
+### Header Definition
+
+```cpp
+// service/mesh/MeshService.h
+#pragma once
+
+#include "Tactility/Mutex.h"
+#include "Tactility/PubSub.h"
+#include "Tactility/service/Service.h"
+#include "Tactility/service/ServiceContext.h"
+
+#include "Protocol/IProtocol.h"
+#include "Profile/ProfileManager.h"
+#include "Storage/MessageStore.h"
+
+namespace meshola::service {
+
+// Event types for PubSub
+struct MessageEvent {
+    Message message;
+    bool isNew;  // true = just received, false = loaded from storage
+};
+
+struct ContactEvent {
+    Contact contact;
+    bool isNew;  // true = newly discovered
+};
+
+struct StatusEvent {
+    bool radioRunning;
+    int contactCount;
+    int pendingMessageCount;
+};
+
+class MeshService final : public tt::service::Service {
+
+    tt::Mutex mutex = tt::Mutex(tt::Mutex::Type::Recursive);
     
-    // Navigation
-    void showView(ViewType view);
+    // Core components
+    std::unique_ptr<ProfileManager> profileManager;
+    std::unique_ptr<MessageStore> messageStore;
+    std::unique_ptr<IProtocol> protocol;
     
-    // Event handlers
+    // PubSub for event broadcasting
+    std::shared_ptr<tt::PubSub<MessageEvent>> messagePubSub;
+    std::shared_ptr<tt::PubSub<ContactEvent>> contactPubSub;
+    std::shared_ptr<tt::PubSub<StatusEvent>> statusPubSub;
+    
+    // Background thread
+    std::unique_ptr<tt::Thread> meshThread;
+    bool running = false;
+    
+    void meshLoop();
     void onMessageReceived(const Message& msg);
-    void onContactUpdated(const Contact& contact, bool isNew);
-    void onAckReceived(uint32_t ackId, bool success);
-    void onProfileSwitch(const Profile& newProfile);
+    void onContactDiscovered(const Contact& contact, bool isNew);
+
+public:
+
+    bool onStart(tt::service::ServiceContext& serviceContext) override;
+    void onStop(tt::service::ServiceContext& serviceContext) override;
+    
+    // Messaging API
+    bool sendMessage(const uint8_t recipientKey[32], const char* text, uint32_t& outAckId);
+    bool sendChannelMessage(const uint8_t channelId[16], const char* text);
+    
+    // Contact API
+    int getContactCount() const;
+    bool getContact(int index, Contact& out) const;
+    bool findContact(const uint8_t publicKey[32], Contact& out) const;
+    
+    // Channel API
+    int getChannelCount() const;
+    bool getChannel(int index, Channel& out) const;
+    
+    // Profile API
+    const Profile* getActiveProfile() const;
+    bool switchProfile(const char* profileId);
+    ProfileManager* getProfileManager();
+    
+    // Message history API
+    bool getMessages(const uint8_t contactKey[32], int maxCount, std::vector<Message>& out);
+    bool getChannelMessages(const uint8_t channelId[16], int maxCount, std::vector<Message>& out);
+    
+    // Radio control
+    bool startRadio();
+    void stopRadio();
+    bool isRadioRunning() const;
+    
+    // PubSub accessors (for apps to subscribe)
+    std::shared_ptr<tt::PubSub<MessageEvent>> getMessagePubSub() const { return messagePubSub; }
+    std::shared_ptr<tt::PubSub<ContactEvent>> getContactPubSub() const { return contactPubSub; }
+    std::shared_ptr<tt::PubSub<StatusEvent>> getStatusPubSub() const { return statusPubSub; }
 };
+
+// Global accessor
+std::shared_ptr<MeshService> findMeshService();
+
+// Service manifest
+extern const tt::service::ServiceManifest manifest;
+
+} // namespace meshola::service
 ```
 
-**Responsibilities:**
-- Create/destroy UI on show/hide
-- Route between views via bottom navigation
-- Wire up MeshService callbacks
-- Handle profile switches
+### Service Registration
+
+```cpp
+// service/mesh/MeshService.cpp
+
+namespace meshola::service {
+
+extern const tt::service::ServiceManifest manifest = {
+    .id = "Mesh",
+    .createService = tt::service::create<MeshService>
+};
+
+std::shared_ptr<MeshService> findMeshService() {
+    auto service = tt::service::findServiceById(manifest.id);
+    return std::static_pointer_cast<MeshService>(service);
+}
+
+} // namespace meshola::service
+```
+
+### Lifecycle
+
+```cpp
+bool MeshService::onStart(ServiceContext& serviceContext) {
+    auto lock = mutex.asScopedLock();
+    lock.lock();
+    
+    // Initialize PubSub channels
+    messagePubSub = std::make_shared<tt::PubSub<MessageEvent>>();
+    contactPubSub = std::make_shared<tt::PubSub<ContactEvent>>();
+    statusPubSub = std::make_shared<tt::PubSub<StatusEvent>>();
+    
+    // Initialize profile manager
+    profileManager = std::make_unique<ProfileManager>();
+    profileManager->init();
+    
+    // Initialize message store with active profile
+    messageStore = std::make_unique<MessageStore>();
+    messageStore->setActiveProfile(profileManager->getActiveProfile()->id);
+    
+    // Initialize protocol based on active profile
+    const Profile* profile = profileManager->getActiveProfile();
+    protocol = ProtocolRegistry::createProtocol(profile->protocolId);
+    if (protocol) {
+        protocol->init(profile->radio);
+        protocol->setMessageCallback([this](const Message& msg) {
+            onMessageReceived(msg);
+        });
+        protocol->setContactCallback([this](const Contact& contact, bool isNew) {
+            onContactDiscovered(contact, isNew);
+        });
+    }
+    
+    TT_LOG_I("MeshService", "Started");
+    return true;
+}
+
+void MeshService::onStop(ServiceContext& serviceContext) {
+    stopRadio();
+    TT_LOG_I("MeshService", "Stopped");
+}
+```
 
 ---
 
-### MeshService (`mesh/MeshService.h/cpp`)
+## Meshola Messenger (Tactility App)
 
-Background service managing protocol operations.
+### App Structure (Simplified)
 
-```cpp
-class MeshService {
-    static MeshService& getInstance();
-    
-    bool init();
-    bool initWithProfile(const Profile& profile);
-    bool reinitWithProfile(const Profile& profile);
-    bool start();
-    void stop();
-    
-    // Messaging
-    bool sendMessage(const Contact& to, const char* text, uint32_t& outAckId);
-    bool sendChannelMessage(const Channel& channel, const char* text);
-    
-    // Callbacks
-    void setMessageCallback(MessageCallback callback);
-    void setContactCallback(ContactCallback callback);
-};
-```
-
-**Responsibilities:**
-- Initialize protocol from active profile
-- Run protocol loop in background thread (TODO)
-- Forward events to UI callbacks
-- Persist messages on receive (via MessageStore)
-
----
-
-### ProfileManager (`profile/Profile.h`, `ProfileManager.cpp`)
-
-Manages user profiles (identities/configurations).
+The app is now much simpler - it's just UI that talks to MeshService:
 
 ```cpp
-struct Profile {
-    char id[16];              // UUID
-    char name[32];            // Display name
-    char protocolId[32];      // "meshcore", "customfork", etc.
-    RadioConfig radio;        // Frequency, BW, SF, CR, TX power
-    char nodeName[32];        // "Meshola-A3F7"
-    uint8_t publicKey[32];
-    uint8_t privateKey[32];
-};
+// MesholaApp.cpp
 
-class ProfileManager {
-    static ProfileManager& getInstance();
+#include "MesholaApp.h"
+#include "service/mesh/MeshService.h"
+
+void MesholaApp::onShow(AppHandle handle, lv_obj_t* parent) {
+    _handle = handle;
     
-    const Profile* getActiveProfile();
-    Profile* createProfile(const char* name);
-    bool switchToProfile(const char* id);
-    bool deleteProfile(const char* id);
-};
-```
-
-**Storage:**
-```
-/data/meshola/messenger/
-├── profiles.json           # Profile list + active ID
-└── profiles/
-    └── {profileId}/
-        └── config.json     # Profile settings
-```
-
----
-
-### MessageStore (`storage/MessageStore.h/cpp`)
-
-Persistent message storage using JSON Lines format.
-
-```cpp
-class MessageStore {
-    static MessageStore& getInstance();
+    // Get the mesh service
+    _meshService = meshola::service::findMeshService();
     
-    void setActiveProfile(const char* profileId);
-    bool appendMessage(const Message& msg);
-    bool loadContactMessages(const uint8_t publicKey[32], int max, vector<Message>& out);
-    bool loadChannelMessages(const uint8_t channelId[16], int max, vector<Message>& out);
-};
-```
-
-**Storage:**
-```
-/data/meshola/messenger/profiles/{profileId}/messages/
-├── dm_{contactKeyHex}.jsonl    # DM history per contact
-└── ch_{channelIdHex}.jsonl     # Channel history per channel
-```
-
-**Format (JSON Lines):**
-```json
-{"ts":1703520000,"sk":"abc...","txt":"Hello","st":2,"isOut":true,"rssi":-85}
-```
-
-**Write Strategy:** Append immediately on receive/send (no message loss)
-
----
-
-### IProtocol (`protocol/IProtocol.h`)
-
-Abstract interface for mesh protocols.
-
-```cpp
-class IProtocol {
-    // Lifecycle
-    virtual bool init(const RadioConfig& config) = 0;
-    virtual bool start() = 0;
-    virtual void stop() = 0;
-    virtual void loop() = 0;
+    // Subscribe to message events
+    _messageSubscription = _meshService->getMessagePubSub()->subscribe(
+        [this](const MessageEvent& event) {
+            tt_lvgl_lock();
+            if (event.isNew) {
+                _chatView.addMessage(event.message);
+            }
+            tt_lvgl_unlock();
+        }
+    );
     
-    // Identity
-    virtual const char* getNodeName() const = 0;
-    virtual bool setNodeName(const char* name) = 0;
-    virtual void getPublicKey(uint8_t out[32]) const = 0;
+    // Subscribe to contact events
+    _contactSubscription = _meshService->getContactPubSub()->subscribe(
+        [this](const ContactEvent& event) {
+            tt_lvgl_lock();
+            refreshContactList();
+            tt_lvgl_unlock();
+        }
+    );
     
-    // Messaging
-    virtual uint32_t sendMessage(const Contact& to, const char* text) = 0;
-    virtual bool sendChannelMessage(const Channel& ch, const char* text) = 0;
+    // Build UI
+    createUI(parent);
     
-    // Feature detection
-    virtual bool hasFeature(ProtocolFeature feature) const = 0;
+    // Load existing data from service
+    refreshContactList();
+    refreshChannelList();
+}
+
+void MesholaApp::onHide(AppHandle handle) {
+    // Unsubscribe from PubSub
+    _meshService->getMessagePubSub()->unsubscribe(_messageSubscription);
+    _meshService->getContactPubSub()->unsubscribe(_contactSubscription);
     
-    // Callbacks
-    virtual void setMessageCallback(MessageCallback cb) = 0;
-    virtual void setContactCallback(ContactCallback cb) = 0;
-};
+    // UI cleanup handled by LVGL parent destruction
+}
+
+void MesholaApp::onSendMessage(const char* text) {
+    if (_activeContact) {
+        uint32_t ackId;
+        _meshService->sendMessage(_activeContact->publicKey, text, ackId);
+    }
+}
 ```
-
-**Implementations:**
-- `MeshCoreProtocol` - Standard MeshCore (stub, needs RadioLib integration)
-- `CustomForkProtocol` - Future custom fork
-- `MeshtasticProtocol` - Future Meshtastic support
-
----
-
-### ChatView (`views/ChatView.h/cpp`)
-
-Main messaging interface.
-
-```cpp
-class ChatView {
-    void create(lv_obj_t* parent);
-    void destroy();
-    
-    void setActiveContact(const Contact* contact);
-    void setActiveChannel(const Channel* channel);
-    void clearActiveConversation();
-    
-    void addMessage(const Message& msg);
-    void updateMessageStatus(uint32_t ackId, MessageStatus status);
-};
-```
-
-**UI Elements:**
-- Welcome screen (when no conversation selected)
-- Header bar (contact/channel name, status, signal info)
-- Scrollable message list
-- Message bubbles (left=incoming, right=outgoing)
-- Input row (textarea + send button)
 
 ---
 
 ## Data Flow
 
-### Sending a Message
+### Message Reception (Background)
 
 ```
-User types message
-        │
-        ▼
-[ChatView] onSendClicked()
-        │
-        ▼
-[MesholaApp] onSendMessage()
-        │
-        ├──► [MeshService] sendMessage()
-        │           │
-        │           ▼
-        │    [IProtocol] sendMessage()
-        │           │
-        │           ▼
-        │    [Radio TX] ─────► RF
-        │
-        ├──► [MessageStore] appendMessage()  // Persist immediately
-        │
-        └──► [ChatView] addMessage()  // Show in UI
+Radio RX ──► IProtocol.loop() ──► MeshService.onMessageReceived()
+                                         │
+                                         ├──► MessageStore.appendMessage()
+                                         │
+                                         └──► messagePubSub.publish(event)
+                                                      │
+                                    ┌─────────────────┼─────────────────┐
+                                    ▼                 ▼                 ▼
+                            [Messenger App]   [Maps App]        [Not Running]
+                            (if subscribed)   (if subscribed)   (stored for later)
 ```
 
-### Receiving a Message
+### Message Sending (From App)
 
 ```
-RF ─────► [Radio RX]
-              │
-              ▼
-       [IProtocol] (internal callback)
-              │
-              ▼
-       [MeshService] messageCallback
-              │
-              ├──► [MessageStore] appendMessage()  // Persist immediately
-              │
-              └──► [MesholaApp] onMessageReceived()
-                          │
-                          ▼
-                   [ChatView] addMessage()  // Show in UI (if active)
+[User taps Send] ──► MesholaApp.onSendMessage()
+                              │
+                              ▼
+                     MeshService.sendMessage()
+                              │
+                              ├──► IProtocol.sendMessage() ──► Radio TX
+                              │
+                              ├──► MessageStore.appendMessage()
+                              │
+                              └──► messagePubSub.publish(event)
 ```
 
-### Profile Switch
+### App Switch Scenario
 
 ```
-User selects new profile in Settings
-              │
-              ▼
-       [ProfileManager] switchToProfile()
-              │
-              ├──► Save current profile
-              │
-              ├──► Load new profile
-              │
-              └──► Trigger callback
-                          │
-                          ▼
-              [MesholaApp] onProfileSwitch()
-                          │
-                          ├──► [MeshService] reinitWithProfile()
-                          │           │
-                          │           ├──► Stop current protocol
-                          │           ├──► Create new protocol instance
-                          │           ├──► [MessageStore] setActiveProfile()
-                          │           └──► Start new protocol
-                          │
-                          └──► [ChatView] clearActiveConversation()
+User in Messenger ──► User opens Maps ──► Message arrives
+        │                    │                   │
+        ▼                    ▼                   ▼
+  Messenger.onHide()   Maps.onShow()      MeshService receives
+  (unsubscribe)        (subscribe)        (stores message)
+                                          (publishes to Maps)
+                                                 │
+User returns to Messenger                        ▼
+        │                               Maps shows notification
+        ▼                               (optional)
+  Messenger.onShow()
+  (subscribe)
+  (load messages from MeshService)
 ```
 
 ---
@@ -374,145 +468,137 @@ User selects new profile in Settings
 ### Directory Structure
 
 ```
-/data/meshola/messenger/
-├── profiles.json                    # Profile list and active profile ID
-└── profiles/
-    ├── a1b2c3d4/                    # Profile "Home"
-    │   ├── config.json              # Profile settings
-    │   ├── contacts.json            # Contact list (TODO)
-    │   ├── channels.json            # Channel list (TODO)
-    │   └── messages/
-    │       ├── dm_abc123...jsonl    # DMs with contact abc123...
-    │       ├── dm_def456...jsonl    # DMs with contact def456...
-    │       └── ch_112233...jsonl    # Messages in channel 112233...
-    │
-    └── e5f6g7h8/                    # Profile "CustomFork"
-        ├── config.json
-        └── messages/
-            └── ...
+/data/meshola/
+├── service/                         # MeshService data
+│   ├── profiles.json                # Profile list + active ID
+│   └── profiles/
+│       ├── {profileId}/
+│       │   ├── config.json          # Profile settings
+│       │   ├── contacts.json        # Contact list
+│       │   ├── channels.json        # Channel list
+│       │   └── messages/
+│       │       ├── dm_{keyHex}.jsonl
+│       │       └── ch_{idHex}.jsonl
+│       └── ...
+│
+└── messenger/                       # App-specific settings (if any)
+    └── ui_preferences.json          # UI state, last viewed contact, etc.
 ```
 
-### File Formats
+### Storage Ownership
 
-**profiles.json:**
-```json
-{
-  "activeProfileId": "a1b2c3d4",
-  "profiles": [
-    {"id": "a1b2c3d4", "name": "Home"},
-    {"id": "e5f6g7h8", "name": "CustomFork"}
-  ]
-}
-```
-
-**config.json (per profile):**
-```json
-{
-  "id": "a1b2c3d4",
-  "name": "Home",
-  "protocolId": "meshcore",
-  "frequency": 906.875,
-  "bandwidth": 250.0,
-  "spreadingFactor": 11,
-  "codingRate": 5,
-  "txPower": 22,
-  "nodeName": "Meshola-A3F7",
-  "hasKeys": true,
-  "publicKey": "abc123...",
-  "privateKey": "def456..."
-}
-```
-
-**messages/*.jsonl (JSON Lines):**
-```
-{"ts":1703520000,"sk":"abc...","txt":"Hello!","st":2,"isOut":false,"rssi":-85}
-{"ts":1703520060,"sk":"abc...","txt":"Hi there","st":2,"isOut":true,"rssi":0}
-```
+| Data | Owner | Reason |
+|------|-------|--------|
+| Profiles | MeshService | Shared across apps |
+| Contacts | MeshService | Shared across apps |
+| Channels | MeshService | Shared across apps |
+| Messages | MeshService | Must persist during app switches |
+| UI preferences | Each App | App-specific |
 
 ---
 
 ## Protocol Abstraction
 
-### Why Protocol Agnostic?
-
-1. **Local flexibility** - CustomFork community may fork MeshCore for custom features
-2. **Future compatibility** - Meshtastic integration possible without app rewrite
-3. **Travel profiles** - Different protocols/settings for different regions
-4. **Testing** - Mock protocol for UI development
-
-### Registration Pattern
+Same as before, but now lives within MeshService:
 
 ```cpp
-// In MeshCoreProtocol.cpp
-static const ProtocolEntry meshCoreEntry = {
-    .id = "meshcore",
-    .name = "MeshCore (Standard)",
-    .create = MeshCoreProtocol::create
+class IProtocol {
+    virtual bool init(const RadioConfig& config) = 0;
+    virtual bool start() = 0;
+    virtual void stop() = 0;
+    virtual void loop() = 0;  // Called by MeshService background thread
+    
+    virtual uint32_t sendMessage(const Contact& to, const char* text) = 0;
+    virtual void setMessageCallback(MessageCallback cb) = 0;
+    virtual void setContactCallback(ContactCallback cb) = 0;
 };
-
-void MeshCoreProtocol::registerSelf() {
-    ProtocolRegistry::registerProtocol(meshCoreEntry);
-}
-
-// At startup (MeshService constructor)
-MeshCoreProtocol::registerSelf();
-// CustomForkProtocol::registerSelf();  // Future
-// MeshtasticProtocol::registerSelf();  // Future
-
-// Creating instance
-IProtocol* protocol = ProtocolRegistry::createProtocol("meshcore");
 ```
 
-### Feature Detection
+---
+
+## PubSub Event System
+
+Tactility provides a PubSub system for event broadcasting. MeshService uses this pattern (learned from GpsService):
 
 ```cpp
-if (protocol->hasFeature(ProtocolFeature::LocationSharing)) {
-    // Show location UI
-}
+// Creating PubSub
+std::shared_ptr<PubSub<MessageEvent>> messagePubSub = std::make_shared<PubSub<MessageEvent>>();
 
-if (protocol->hasFeature(ProtocolFeature::Channels)) {
-    // Show channels tab
-}
+// Publishing events (from MeshService)
+MessageEvent event = { .message = msg, .isNew = true };
+messagePubSub->publish(event);
+
+// Subscribing (from Apps)
+auto subscriptionId = meshService->getMessagePubSub()->subscribe(
+    [](const MessageEvent& event) {
+        // Handle new message
+    }
+);
+
+// Unsubscribing (on app hide)
+meshService->getMessagePubSub()->unsubscribe(subscriptionId);
 ```
 
 ---
 
 ## Threading Model
 
-### Current (Single-Threaded)
-- All operations on main LVGL thread
-- Protocol loop called from app (TODO)
+### Service Thread
 
-### Target (Multi-Threaded)
 ```
-┌─────────────────┐     ┌─────────────────┐
-│   LVGL Thread   │     │  Mesh Thread    │
-│   (Main/UI)     │     │  (Background)   │
-├─────────────────┤     ├─────────────────┤
-│ MesholaApp      │     │ MeshService     │
-│ Views           │◄────│ Protocol loop   │
-│ Input handling  │     │ Radio RX/TX     │
-│ Display updates │     │ Message persist │
-└─────────────────┘     └─────────────────┘
-        │                       │
-        └───────┬───────────────┘
-                │
-        ┌───────▼───────┐
-        │  Mutex Lock   │
-        │ (tt_lvgl_lock)│
-        └───────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    MeshService Thread                        │
+│                    (Background - Always Running)             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│    while (running) {                                         │
+│        protocol->loop();     // Radio RX/TX                  │
+│        processIncoming();    // Handle received messages     │
+│        checkTimeouts();      // ACK timeouts, etc.          │
+│        vTaskDelay(10ms);                                    │
+│    }                                                         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Thread Safety Rules:**
-1. UI updates from mesh thread require `tt_lvgl_lock()`
-2. MeshService methods use internal mutex
-3. MessageStore file operations are atomic (single append)
+### LVGL Thread (Main)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    LVGL Thread (Main)                        │
+│                    (UI Rendering)                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│    Apps run here                                             │
+│    PubSub callbacks run here (after tt_lvgl_lock)           │
+│    All UI updates happen here                                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Thread Safety
+
+```cpp
+// MeshService methods use internal mutex
+bool MeshService::sendMessage(...) {
+    auto lock = mutex.asScopedLock();
+    lock.lock();
+    // ... thread-safe operations
+}
+
+// PubSub callbacks in apps must lock LVGL
+_meshService->getMessagePubSub()->subscribe([this](const MessageEvent& event) {
+    tt_lvgl_lock();
+    _chatView.addMessage(event.message);
+    tt_lvgl_unlock();
+});
+```
 
 ---
 
 ## UI Architecture
 
-### View Hierarchy
+### View Hierarchy (App Only)
 
 ```
 lv_obj_t* parent (from Tactility)
@@ -523,9 +609,9 @@ lv_obj_t* parent (from Tactility)
     │       │
     │       └── [Active View]
     │           - ChatView
-    │           - ContactsView (TODO)
-    │           - ChannelsView (TODO)
-    │           - SettingsView (placeholder)
+    │           - ContactsView
+    │           - ChannelsView
+    │           - SettingsView
     │
     └── Navigation Bar
             │
@@ -542,15 +628,49 @@ lv_obj_t* parent (from Tactility)
 | COLOR_BG_DARK | 0x1a1a1a | Main background |
 | COLOR_BG_CARD | 0x2d2d2d | Cards, input areas |
 | COLOR_ACCENT | 0x0066cc | Buttons, active states |
-| COLOR_ACCENT_DIM | 0x333333 | Inactive buttons |
 | COLOR_TEXT | 0xffffff | Primary text |
 | COLOR_TEXT_DIM | 0x888888 | Secondary text |
 | COLOR_SUCCESS | 0x00aa55 | Online, delivered |
-| COLOR_WARNING | 0xffaa00 | Warnings |
-| COLOR_ERROR | 0xcc3333 | Failed, errors |
 | COLOR_MSG_OUTGOING | 0x0055aa | Sent message bubbles |
 | COLOR_MSG_INCOMING | 0x3d3d3d | Received message bubbles |
 
 ---
 
-*This document is automatically updated as the architecture evolves.*
+## Future: Meshola Maps Integration
+
+Both apps share MeshService:
+
+```cpp
+// In Meshola Maps
+void MesholaMapsApp::onShow(...) {
+    _meshService = meshola::service::findMeshService();
+    
+    // Subscribe to contact updates (for location pins)
+    _contactSub = _meshService->getContactPubSub()->subscribe(
+        [this](const ContactEvent& event) {
+            if (event.contact.hasLocation) {
+                updateMapPin(event.contact);
+            }
+        }
+    );
+    
+    // Also use GpsService for own location
+    _gpsService = tt::service::gps::findGpsService();
+    // ...
+}
+```
+
+---
+
+## Key Lessons Learned
+
+1. **Tactility Services persist across app switches** - Critical for background radio operation
+2. **Tactility uses PubSub for event broadcasting** - Apps subscribe to service events
+3. **GpsService is the reference implementation** - Our MeshService follows the same pattern
+4. **One app foreground at a time** - Apps have onShow/onHide lifecycle
+5. **Services can be found from anywhere** - `findServiceById()` pattern
+6. **Thread safety via Mutex** - Both services and LVGL require locking
+
+---
+
+*This document reflects the architectural revision discovered on December 25, 2024.*
