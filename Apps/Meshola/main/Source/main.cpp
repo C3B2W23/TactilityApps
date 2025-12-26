@@ -4,7 +4,7 @@
 extern "C" {
 
 /**
- * Entry point for Meshola - Multi-protocol mesh messaging
+ * Entry point for Meshola Messenger - Multi-protocol mesh messaging
  * 
  * This is called when the app is loaded from SD card or flash.
  */

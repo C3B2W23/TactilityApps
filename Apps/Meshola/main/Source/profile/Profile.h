@@ -216,7 +216,7 @@ public:
     
     /**
      * Get the storage path for a profile's data.
-     * e.g., "/data/meshola/profiles/abc123/"
+     * e.g., "/data/meshola/messenger/profiles/abc123/"
      */
     void getProfileDataPath(const char* profileId, char* dest, size_t maxLen);
 
@@ -246,7 +246,7 @@ private:
     ProfileSwitchCallback _switchCallback;
     
     // Storage base path
-    static constexpr const char* STORAGE_BASE = "/data/meshola";
+    static constexpr const char* STORAGE_BASE = "/data/meshola/messenger";
 };
 
 } // namespace meshola

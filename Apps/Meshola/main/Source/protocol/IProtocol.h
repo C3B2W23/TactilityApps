@@ -1,9 +1,9 @@
 #pragma once
 
 /**
- * Meshola Protocol Abstraction Layer
+ * Meshola Messenger Protocol Abstraction Layer
  * 
- * This interface decouples the Meshola UI from specific mesh protocol
+ * This interface decouples the Meshola Messenger UI from specific mesh protocol
  * implementations, allowing support for MeshCore, Meshtastic, custom
  * forks, and future protocols.
  */
@@ -149,7 +149,7 @@ using ErrorCallback = std::function<void(int errorCode, const char* message)>;
  * Abstract interface for mesh protocols.
  * 
  * All protocol implementations (MeshCore, CustomFork fork, Meshtastic, etc.)
- * must implement this interface. The Meshola UI only interacts through this
+ * must implement this interface. The Meshola Messenger UI only interacts through this
  * abstraction, making it easy to swap protocols at runtime.
  */
 class IProtocol {

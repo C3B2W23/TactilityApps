@@ -100,7 +100,7 @@ void ChatView::createWelcomeView() {
     
     // Welcome text
     auto* title = lv_label_create(_welcomeView);
-    lv_label_set_text(title, "Welcome to Meshola");
+    lv_label_set_text(title, "Welcome to Meshola Messenger");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_16, LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(title, lv_color_hex(COLOR_TEXT), LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(title, 10, LV_STATE_DEFAULT);

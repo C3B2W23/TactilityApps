@@ -1,11 +1,11 @@
-# Meshola - Project Overview
+# Meshola Messenger - Project Overview
 **Version:** 0.1.0  
 **Last Updated:** December 25, 2024  
 **Status:** Active Development - Pre-Alpha
 ---
-## What is Meshola?
-Meshola is a **protocol-agnostic mesh networking chat application** for the LilyGo T-Deck running Tactility OS. It provides a unified interface for communicating over various mesh protocols including MeshCore, custom forks, and potentially Meshtastic in the future.
-The name "Meshola" combines "Mesh" (mesh networking) with a unique, brandable suffix. The domain meshola.com is owned by the project maintainer.
+## What is Meshola Messenger?
+Meshola Messenger is a **protocol-agnostic mesh networking chat application** for the LilyGo T-Deck running Tactility OS. It provides a unified interface for communicating over various mesh protocols including MeshCore, custom forks, and potentially Meshtastic in the future.
+The name "Meshola Messenger" combines "Mesh" (mesh networking) with a unique, brandable suffix. The domain meshola.com is owned by the project maintainer.
 ---
 ## Vision
 Create a professional-grade mesh messaging application that:

@@ -13,7 +13,7 @@ namespace meshola {
  * Each profile has separate message storage.
  * 
  * Storage format:
- * /data/meshola/profiles/{profileId}/messages/
+ * /data/meshola/messenger/profiles/{profileId}/messages/
  *   ├── dm_{contactKeyHex}.jsonl    # DMs with specific contact
  *   └── ch_{channelIdHex}.jsonl     # Channel messages
  */

@@ -1,4 +1,4 @@
-# Meshola - API Reference
+# Meshola Messenger - API Reference
 
 **Version:** 0.1.0  
 **Last Updated:** December 25, 2024

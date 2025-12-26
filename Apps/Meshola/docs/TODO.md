@@ -1,4 +1,4 @@
-# Meshola - TODO & Task Tracking
+# Meshola Messenger - TODO & Task Tracking
 
 **Last Updated:** December 25, 2024
 
@@ -170,7 +170,7 @@
 ```
 Source:  Apps/Meshola/main/Source/
 Docs:    MesholaDocs/
-Storage: /data/meshola/
+Storage: /data/meshola/messenger/
 ```
 
 ### Build Commands

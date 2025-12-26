@@ -1,4 +1,4 @@
-# Meshola - Architecture Document
+# Meshola Messenger - Architecture Document
 
 **Version:** 0.1.0  
 **Last Updated:** December 25, 2024
@@ -22,7 +22,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         MESHOLA APPLICATION                         │
+│                         MESHOLA MESSENGER APPLICATION                         │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                      UI LAYER (LVGL)                        │   │
@@ -191,7 +191,7 @@ class ProfileManager {
 
 **Storage:**
 ```
-/data/meshola/
+/data/meshola/messenger/
 ├── profiles.json           # Profile list + active ID
 └── profiles/
     └── {profileId}/
@@ -217,7 +217,7 @@ class MessageStore {
 
 **Storage:**
 ```
-/data/meshola/profiles/{profileId}/messages/
+/data/meshola/messenger/profiles/{profileId}/messages/
 ├── dm_{contactKeyHex}.jsonl    # DM history per contact
 └── ch_{channelIdHex}.jsonl     # Channel history per channel
 ```
@@ -374,7 +374,7 @@ User selects new profile in Settings
 ### Directory Structure
 
 ```
-/data/meshola/
+/data/meshola/messenger/
 ├── profiles.json                    # Profile list and active profile ID
 └── profiles/
     ├── a1b2c3d4/                    # Profile "Home"

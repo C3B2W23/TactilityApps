@@ -12,7 +12,7 @@
 
 namespace meshola {
 
-static const char* STORAGE_BASE = "/data/meshola";
+static const char* STORAGE_BASE = "/data/meshola/messenger";
 
 // Singleton instance
 static MessageStore* s_instance = nullptr;

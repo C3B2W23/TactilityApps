@@ -14,7 +14,7 @@ class ChannelsView;
 class SettingsView;
 
 /**
- * Meshola - Multi-protocol mesh messaging for Tactility
+ * Meshola Messenger - Multi-protocol mesh messaging for Tactility
  * 
  * A protocol-agnostic mesh messaging client supporting:
  * - MeshCore (standard and forks)

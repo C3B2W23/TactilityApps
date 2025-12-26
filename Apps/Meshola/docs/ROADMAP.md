@@ -1,4 +1,4 @@
-# Meshola - Roadmap
+# Meshola Messenger - Roadmap
 
 **Last Updated:** December 25, 2024
 

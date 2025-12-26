@@ -76,7 +76,7 @@ bool MeshCoreProtocol::init(const RadioConfig& config) {
     
     // TODO: Initialize MeshCore objects
     // _radio = new SX1262(...);
-    // _mesh = new MesholaMesh(_radio, ...);
+    // _mesh = new MesholaMessengerMesh(_radio, ...);
     
     return true;
 }

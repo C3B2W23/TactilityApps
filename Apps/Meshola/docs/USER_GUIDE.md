@@ -1,4 +1,4 @@
-# Meshola - User Guide
+# Meshola Messenger - User Guide
 
 **Version:** 0.1.0  
 **Last Updated:** December 25, 2024
@@ -21,9 +21,9 @@
 
 ## Introduction
 
-### What is Meshola?
+### What is Meshola Messenger?
 
-Meshola is a mesh networking chat application for the LilyGo T-Deck. It allows you to send and receive messages over LoRa radio without needing cell towers, internet, or any infrastructure.
+Meshola Messenger is a mesh networking chat application for the LilyGo T-Deck. It allows you to send and receive messages over LoRa radio without needing cell towers, internet, or any infrastructure.
 
 ### What is Mesh Networking?
 
@@ -340,7 +340,7 @@ If Meshola crashes:
 ### Storage Location
 
 ```
-/data/meshola/
+/data/meshola/messenger/
 ├── profiles.json
 └── profiles/{id}/
     ├── config.json
@@ -358,7 +358,7 @@ If Meshola crashes:
 ## Getting Help
 
 - **Documentation:** This guide
-- **Community:** Meshola Community
+- **Community:** Meshola Messenger Community
 - **Issues:** GitHub repository
 
 ---

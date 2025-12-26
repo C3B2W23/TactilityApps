@@ -1,8 +1,8 @@
-# Meshola
+# Meshola Messenger
 
 **Multi-protocol mesh messaging for Tactility OS**
 
-Meshola is a protocol-agnostic mesh networking client for the LilyGo T-Deck running Tactility. It supports multiple mesh protocols including MeshCore, with a clean abstraction layer allowing easy addition of new protocols.
+Meshola Messenger is a protocol-agnostic mesh networking client for the LilyGo T-Deck running Tactility. It supports multiple mesh protocols including MeshCore, with a clean abstraction layer allowing easy addition of new protocols.
 
 ## Features
 
@@ -17,7 +17,7 @@ Meshola is a protocol-agnostic mesh networking client for the LilyGo T-Deck runn
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Meshola App UI                           │
+│                        Meshola Messenger App UI                           │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐   │
 │  │ ChatView │ │  Peers   │ │ Channels │ │     Settings     │   │
 │  │          │ │   View   │ │   View   │ │                  │   │
@@ -94,7 +94,7 @@ ProtocolRegistry::registerProtocol({
 ## Project Structure
 
 ```
-Meshola/
+MesholaMessenger/
 ├── manifest.properties     # Tactility app manifest
 ├── CMakeLists.txt         # Build configuration
 ├── README.md              # This file
@@ -145,7 +145,7 @@ python tactility.py build
 - [x] MeshService (background thread)
 - [x] Main app with navigation
 - [x] Placeholder views (Chat, Peers, Channels, Settings)
-- [x] Rebranded as Meshola
+- [x] Rebranded as Meshola Messenger
 
 ### In Progress 🚧
 - [ ] Full ChatView implementation

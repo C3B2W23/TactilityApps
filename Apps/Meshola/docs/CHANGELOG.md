@@ -1,4 +1,4 @@
-# Meshola - Changelog
+# Meshola Messenger - Changelog
 
 All notable changes to this project are documented in this file.
 
@@ -87,14 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - Namespace: `meshola`
-- App ID: `com.meshola.app`
+- App ID: `com.meshola.messenger`
 - Target: ESP32-S3 (LilyGo T-Deck)
 - Framework: Tactility OS with LVGL
 - SDK Version: 0.6.0
 
 ### Storage Paths
 ```
-/data/meshola/
+/data/meshola/messenger/
 ├── profiles.json
 └── profiles/{id}/
     ├── config.json
@@ -119,7 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Session 2: Rebranding**
 - Renamed from "MeshCore App" to "Meshola"
 - Updated namespace to `meshola`
-- Changed app ID to `com.meshola.app`
+- Changed app ID to `com.meshola.messenger`
 - Updated all class names and references
 
 **Session 3: Unique Node Naming**
