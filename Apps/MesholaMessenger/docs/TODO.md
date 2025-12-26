@@ -12,9 +12,7 @@
 
 | Task | Priority | Status | Notes |
 |------|----------|--------|-------|
-| Integration testing | High | Ready | Build and test on hardware |
-| RadioLib SX1262 bring-up | High | In Progress | MeshCoreProtocol hardening for ESP-IDF |
-| Default Public channel wiring | High | In Progress | MeshCore “Public” channel (8b3387e9c5cdea6ac9e5edbaa115cd72) |
+| Integration testing | High | In Progress | Flash and exercise messaging on hardware |
 | Advert discovery → Discovered list | High | In Progress | Parse adverts into contacts with role/favorite flags |
 | ContactsView grouping & favorites | High | In Progress | Group by role (Companion/Repeater/Room), favorites pinned |
 
@@ -24,7 +22,7 @@
 |------|----------|----------|-------|
 | ChannelsView implementation | High | 2-3 hrs | Core UI for channel selection |
 | Profile Editor UI | Medium | 3-4 hrs | Full editing screen |
-| MeshCore protocol integration | High | 4-6 hrs | Actual RadioLib integration |
+| Replace compat stubs with real services | High | 2-3 hrs | Swap httpd/http client/wifi/i2c/elf to real IDF calls once available |
 
 ### Blocked ⛔
 
@@ -36,28 +34,12 @@
 
 ### December 26, 2024
 
-- [x] **CRITICAL DISCOVERY: Tactility Service Model** - Services run in background!
-- [x] Analyzed Tactility source code for Service/App architecture
-- [x] Studied GpsService as reference implementation
-- [x] Identified PubSub pattern for event broadcasting
-- [x] Updated architecture documentation with new model
-- [x] **COMPLETED: MesholaMsgService rewritten as Tactility Service**
-- [x] Implemented PubSub event types (MessageEvent, ContactEvent, AckEvent, StatusEvent)
-- [x] Moved ProfileManager, MessageStore, IProtocol ownership into MesholaMsgService
-- [x] Removed singleton patterns from ProfileManager and MessageStore
-- [x] Refactored MesholaApp to subscribe to MesholaMsgService PubSub
-- [x] Created TACTILITY_REFERENCE.md documentation
-- [x] **RENAMED: MeshService → MesholaMsgService** (namespace safety)
-- [x] Updated service ID to "MesholaMsg"
-- [x] **DOCUMENTED: Meshola Maps integration architecture**
-- [x] Created INTEGRATION.md with full ecosystem contracts
-- [x] Reserved shared data paths and formats
-- [x] Defined inter-app communication pattern (Maps → Messenger → MesholaMsgService)
-- [x] **FIXED: Views now receive service via setService()** instead of getInstance()
-- [x] Updated ChatView and ContactsView to accept service pointer from MesholaApp
-- [x] Fixed include paths (mesh/ → service/)
-- [x] Added recipientKey to Message struct for proper DM tracking
-- [x] **CODE REVIEW COMPLETED**: All components verified for consistency
+- [x] Full app build succeeds with ESP32-S3 target, RadioLib, and compat stubs
+- [x] Partition profile set to single_app_large, flash size 16MB
+- [x] Firmware artifact MesholaMessenger.bin (~1.07 MB) generated for flashing
+- [x] Compat stubs added (http server/client, esp-now/wifi, timers, elf, cJSON, minmea, i2c) to allow app ELF packaging
+- [x] RadioLib wired to SX1262 via custom Esp32S3Hal and packet framing updated
+- [x] Default MeshCore Public channel embedded (8b3387e9c5cdea6ac9e5edbaa115cd72 / izOH6cXN6mrJ5e26oRXNcg==)
 
 ---
 

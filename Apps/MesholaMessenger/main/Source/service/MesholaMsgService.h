@@ -22,6 +22,7 @@
 #include "Tactility/service/ServiceContext.h"
 #include "Tactility/service/ServiceManifest.h"
 #include "Tactility/service/ServiceRegistration.h"
+#include "Tactility/service/ServicePaths.h"
 
 #include "../protocol/IProtocol.h"
 #include "../profile/Profile.h"
@@ -319,7 +320,6 @@ private:
     void setState(ServiceState newState);
     bool initializeProtocol(const Profile& profile);
     void meshThreadMain();
-    static int32_t meshThreadEntry(void* context);
     
     // Protocol callbacks
     void onMessageReceived(const Message& msg);

@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#ifdef ESP_PLATFORM
+#include <RadioLib.h>
+#include "Esp32S3Hal.h"
+#endif
 
 namespace meshola {
 
@@ -93,6 +97,7 @@ private:
     ErrorCallback _errorCallback;
     
 #ifdef ESP_PLATFORM
+    Esp32S3Hal* _hal = nullptr;
     Module* _module = nullptr;
     SX1262* _radio = nullptr;
     bool _rxListening = false;

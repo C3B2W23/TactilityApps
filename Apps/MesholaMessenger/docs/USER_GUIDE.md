@@ -46,6 +46,15 @@ Future support planned for:
 
 ## Getting Started
 
+### Build & Flash (T-Deck)
+- MesholaMessenger is bundled into the Tactility firmware image (no SD card needed on the T-Deck).
+- Use the standard Tactility toolchain (`idf.py build/flash`) with this app included.
+- Flash config: **ESP32-S3**, partition profile **single_app_large**, flash size **16MB**.
+- Default channel is preloaded:
+  - Name: `Public`
+  - Hex: `8b3387e9c5cdea6ac9e5edbaa115cd72`
+  - Base64: `izOH6cXN6mrJ5e26oRXNcg==`
+
 ### First Launch
 
 When you first open Meshola:

@@ -1,4 +1,8 @@
 #include "MeshCoreProtocol.h"
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+#endif
 #include <cstring>
 #include <cstdio>
 #include <ctime>
@@ -8,14 +12,6 @@
 #include <esp_mac.h>
 #endif
  
-// Integrate RadioLib for SX1262 on T-Deck
-#include <RadioLib.h>
-#if defined(RADIOLIB_BUILD_ARDUINO)
-#include <SPI.h>
-#endif
-// NOTE: Full MeshCore integration is still TODO – for now we only use RadioLib
-// to get packets on-air/off-air so that end-to-end testing is possible.
-
 #include <Tactility/Log.h>
 
 namespace meshola {
@@ -129,16 +125,19 @@ bool MeshCoreProtocol::init(const RadioConfig& config) {
         delete _module;
         _module = nullptr;
     }
+    if (_hal) {
+        _hal->term();
+        delete _hal;
+        _hal = nullptr;
+    }
+
+    // ESP-IDF HAL for RadioLib
+    _hal = new Esp32S3Hal(PIN_LORA_SCLK, PIN_LORA_MISO, PIN_LORA_MOSI);
+    _hal->init();
 
     // Create RadioLib module for SX1262 on T-Deck
-    _module = new Module(PIN_LORA_NSS, PIN_LORA_DIO1, PIN_LORA_RST, PIN_LORA_BUSY);
-#if defined(RADIOLIB_BUILD_ARDUINO)
-    // When building under Arduino HAL, push the T-Deck SPI pin map.
-    _module->spiSettings = SPISettings(2000000, MSBFIRST, SPI_MODE0);
-    _module->pinSCK = PIN_LORA_SCLK;
-    _module->pinMISO = PIN_LORA_MISO;
-    _module->pinMOSI = PIN_LORA_MOSI;
-#endif
+    _module = new Module(_hal, PIN_LORA_NSS, PIN_LORA_DIO1, PIN_LORA_RST, PIN_LORA_BUSY);
+    _module->init();
 
     _radio = new SX1262(_module);
 
@@ -161,11 +160,6 @@ bool MeshCoreProtocol::init(const RadioConfig& config) {
     _radio->setDio2AsRfSwitch(true);
     _radio->setCRC(2);
     _radio->setOutputPower(_config.txPower);
-#if defined(ESP_PLATFORM) && !defined(RADIOLIB_BUILD_ARDUINO)
-    // Ensure SPI is initialized when using ESP-IDF HAL
-    _radio->getMod()->hal->init();
-#endif
-
     // Prepare continuous RX loop
     _rxListening = false;
 #endif
@@ -206,6 +200,11 @@ void MeshCoreProtocol::stop() {
     if (_module) {
         delete _module;
         _module = nullptr;
+    }
+    if (_hal) {
+        _hal->term();
+        delete _hal;
+        _hal = nullptr;
     }
     _rxListening = false;
 #endif
@@ -261,7 +260,7 @@ void MeshCoreProtocol::loop() {
             // First try to parse as advert
             Contact discovered{};
             if (parseAdvert(rxBuf, packetLen, discovered)) {
-                discovered.rssi = (int16_t)_radio->getRSSI();
+                discovered.lastRssi = (int16_t)_radio->getRSSI();
                 discovered.lastSnr = (int8_t)_radio->getSNR();
                 discovered.lastSeen = (uint32_t)time(nullptr);
                 discovered.isOnline = true;
@@ -755,3 +754,7 @@ void MeshCoreProtocol::registerSelf() {
 }
 
 } // namespace meshola
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif

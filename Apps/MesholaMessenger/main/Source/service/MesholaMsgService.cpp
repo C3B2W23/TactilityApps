@@ -209,8 +209,10 @@ bool MesholaMsgService::startRadio() {
     _meshThread = std::make_unique<tt::Thread>(
         "MesholaMsgService",
         8192,  // Stack size
-        meshThreadEntry,
-        this
+        [this]() -> int32_t {
+            meshThreadMain();
+            return 0;
+        }
     );
     _meshThread->start();
     
@@ -248,16 +250,6 @@ void MesholaMsgService::stopRadio() {
 
 bool MesholaMsgService::isRadioRunning() const {
     return _threadRunning;
-}
-
-// ============================================================================
-// Background Thread
-// ============================================================================
-
-int32_t MesholaMsgService::meshThreadEntry(void* context) {
-    auto* self = static_cast<MesholaMsgService*>(context);
-    self->meshThreadMain();
-    return 0;
 }
 
 void MesholaMsgService::meshThreadMain() {
@@ -304,7 +296,10 @@ void MesholaMsgService::onContactDiscovered(const Contact& contact, bool isNew) 
 }
 
 void MesholaMsgService::onStatusChanged(const NodeStatus& status) {
-    TT_LOG_D(TAG, "Status changed: %s", status.isOnline ? "online" : "offline");
+    TT_LOG_D(TAG, "Status changed: radio=%s batt=%u%% heap=%u",
+             status.radioRunning ? "on" : "off",
+             status.batteryPercent,
+             status.freeHeap);
     publishStatusEvent();
 }
 

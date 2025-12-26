@@ -190,6 +190,29 @@ struct AppManifest {
 - Incoming adverts populate “Discovered” contacts; each Contact tracks `role`, `isDiscovered`, `isFavorite`.
 - MesholaMsgService publishes ContactEvent on advert reception; UI can promote or favorite.
 
+### ESP32-S3 / RadioLib integration status (T-Deck)
+- Custom `Esp32S3Hal` for RadioLib (Module ctor now takes `RadioLibHal*`).
+- SX1262 pinout wired for T-Deck; RX loop polls IRQ flags.
+- Packet framing: magic (0xCA,0xFE), version=1, flags (advert/channel), channelId, sender/recipient keys, UTF-8 text.
+- Default MeshCore Public channel baked in (see above) for out-of-box messaging.
+
+### Compat shims for app ELF packaging
+To allow `MesholaMessenger.app.elf` to link in isolation (without full firmware services), we provide weak stubs under `Source/compat/` for:
+- esp_http_server / esp_http_client entrypoints
+- FreeRTOS event groups and timers
+- esp_now / esp_wifi (including WIFI_EVENT/IP_EVENT bases) and esp_netif
+- TinyUSB MSC, VFS FAT info
+- minmea (GPS), cJSON helpers, LVGL screenshot, I2C driver hooks
+- ELF loader hooks (`esp_elf_init/relocate/request/deinit`)
+
+These stubs are **link-time placeholders only**; the full Tactility firmware will override them with real implementations.
+
+### Build/profile notes
+- Build target: ESP32-S3 (T-Deck) via ESP-IDF 5.5
+- Partition: `single_app_large`, flash size set to **16MB**
+- Current firmware artifact: `MesholaMessenger.bin` ≈ **1.07 MB** (0x10dbd0)
+- App is bundled into the Tactility firmware image (no SD card needed on T-Deck). Flash via `idf.py -p <port> -b <baud> flash`.
+
 ### Header Definition
 
 ```cpp

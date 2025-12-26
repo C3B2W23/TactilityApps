@@ -101,7 +101,7 @@ void ContactsView::createHeader() {
     
     auto* broadcastLabel = lv_label_create(_broadcastBtn);
     lv_label_set_text(broadcastLabel, LV_SYMBOL_WIFI " Broadcast");
-    lv_obj_set_style_text_font(broadcastLabel, &lv_font_montserrat_12, LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(broadcastLabel, &lv_font_montserrat_14, LV_STATE_DEFAULT);
     
     // Refresh button
     _refreshBtn = lv_btn_create(btnRow);
@@ -274,7 +274,7 @@ lv_obj_t* ContactsView::createContactRow(const Contact& contact, int index) {
     
     auto* statusLabel = lv_label_create(infoCol);
     lv_label_set_text(statusLabel, statusBuf);
-    lv_obj_set_style_text_font(statusLabel, &lv_font_montserrat_12, LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(statusLabel, &lv_font_montserrat_14, LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(statusLabel, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
     
     // Right-side controls and signal
@@ -289,7 +289,7 @@ lv_obj_t* ContactsView::createContactRow(const Contact& contact, int index) {
     char signalBuf[16];
     snprintf(signalBuf, sizeof(signalBuf), "%s %d", getSignalIcon(contact.lastRssi), contact.lastRssi);
     lv_label_set_text(signalLabel, signalBuf);
-    lv_obj_set_style_text_font(signalLabel, &lv_font_montserrat_12, LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(signalLabel, &lv_font_montserrat_14, LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(signalLabel, lv_color_hex(COLOR_TEXT_DIM), LV_STATE_DEFAULT);
 
     // Favorite toggle
@@ -299,7 +299,7 @@ lv_obj_t* ContactsView::createContactRow(const Contact& contact, int index) {
     lv_obj_add_event_cb(favBtn, onFavoriteToggled, LV_EVENT_CLICKED, this);
     lv_obj_set_user_data(favBtn, (void*)(intptr_t)index);
     auto* favLabel = lv_label_create(favBtn);
-    lv_label_set_text(favLabel, contact.isFavorite ? LV_SYMBOL_STAR : LV_SYMBOL_STAR);
+    lv_label_set_text(favLabel, contact.isFavorite ? "*" : " ");
     lv_obj_set_style_text_color(favLabel, lv_color_hex(contact.isFavorite ? COLOR_ACCENT : COLOR_TEXT_DIM), LV_STATE_DEFAULT);
     lv_obj_center(favLabel);
 
@@ -389,7 +389,7 @@ void ContactsView::onBroadcastPressed(lv_event_t* event) {
 
 void ContactsView::onContactPressed(lv_event_t* event) {
     auto* view = static_cast<ContactsView*>(lv_event_get_user_data(event));
-    auto* row = lv_event_get_target(event);
+    lv_obj_t* row = static_cast<lv_obj_t*>(lv_event_get_target(event));
     
     if (view && view->_contactSelectedCallback) {
         int index = (int)(intptr_t)lv_obj_get_user_data(row);
@@ -401,7 +401,7 @@ void ContactsView::onContactPressed(lv_event_t* event) {
 
 void ContactsView::onFavoriteToggled(lv_event_t* event) {
     auto* view = static_cast<ContactsView*>(lv_event_get_user_data(event));
-    auto* btn = lv_event_get_target(event);
+    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(event));
     if (!view || !btn || !view->_service) return;
     int index = (int)(intptr_t)lv_obj_get_user_data(btn);
     if (index < 0 || index >= (int)view->_contacts.size()) return;
@@ -413,7 +413,7 @@ void ContactsView::onFavoriteToggled(lv_event_t* event) {
 
 void ContactsView::onAddPressed(lv_event_t* event) {
     auto* view = static_cast<ContactsView*>(lv_event_get_user_data(event));
-    auto* btn = lv_event_get_target(event);
+    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(event));
     if (!view || !btn || !view->_service) return;
     int index = (int)(intptr_t)lv_obj_get_user_data(btn);
     if (index < 0 || index >= (int)view->_contacts.size()) return;
